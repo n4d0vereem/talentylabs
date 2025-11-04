@@ -1,0 +1,11 @@
+# Placeholders temporaires
+
+En attendant d'ajouter les vraies photos, les images utilisent des placeholders.
+
+Pour ajouter les vraies photos :
+1. Téléchargez jade-gattoni.jpg (la photo avec boucles d'oreilles)
+2. Téléchargez saonara-petto.jpg (la photo blonde)
+3. Placez-les dans ce dossier public/talents/
+
+Les photos s'afficheront automatiquement !
+
