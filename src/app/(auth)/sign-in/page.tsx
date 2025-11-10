@@ -23,14 +23,48 @@ export default function SignInPage() {
     setError("");
 
     try {
-      await signIn.email({
+      const result = await signIn.email({
         email,
         password,
-        callbackURL: "/dashboard",
       });
+
+      // Vérifier si la connexion a réussi
+      if (result.error) {
+        // Analyser le type d'erreur pour donner un message précis
+        const errorMessage = result.error.message?.toLowerCase() || "";
+        
+        if (errorMessage.includes("user") && errorMessage.includes("not found")) {
+          setError("Aucun compte associé à cet email. Veuillez vous inscrire d'abord.");
+        } else if (errorMessage.includes("password") || errorMessage.includes("incorrect") || errorMessage.includes("invalid")) {
+          setError("Mot de passe incorrect. Veuillez réessayer.");
+        } else if (errorMessage.includes("email")) {
+          setError("Format d'email invalide.");
+        } else {
+          setError("Email ou mot de passe incorrect. Veuillez vérifier vos identifiants.");
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      // Rediriger vers le dashboard
       router.push("/dashboard");
     } catch (err: any) {
-      setError(err.message || "Email ou mot de passe incorrect");
+      console.error("Sign-in error:", err);
+      
+      // Gestion des erreurs avec messages plus précis
+      const errorMessage = err?.message?.toLowerCase() || "";
+      
+      if (errorMessage.includes("user") && (errorMessage.includes("not found") || errorMessage.includes("does not exist"))) {
+        setError("❌ Aucun compte trouvé avec cet email. Veuillez créer un compte d'abord.");
+      } else if (errorMessage.includes("password") || errorMessage.includes("incorrect") || errorMessage.includes("invalid")) {
+        setError("🔒 Mot de passe incorrect. Veuillez réessayer.");
+      } else if (errorMessage.includes("email")) {
+        setError("📧 Format d'email invalide.");
+      } else if (errorMessage.includes("network") || errorMessage.includes("fetch")) {
+        setError("🌐 Erreur de connexion. Vérifiez votre connexion internet.");
+      } else {
+        setError("❌ Identifiants incorrects. Vérifiez votre email et mot de passe.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -93,11 +127,11 @@ export default function SignInPage() {
       {/* Partie droite - Formulaire */}
       <div className="flex flex-col items-center justify-center p-16 bg-white">
         <div className="w-full max-w-lg space-y-10">
-          {/* Logo POMELO */}
+          {/* Logo TALENTYLABS */}
           <div className="flex flex-col items-start space-y-6">
             <div>
               <h1 className="text-5xl font-light text-black tracking-tight mb-3">
-                pomelo
+                talentylabs
               </h1>
               <div className="h-1.5 w-20 bg-gradient-to-r from-teal-500 to-orange-500 rounded-full" />
             </div>

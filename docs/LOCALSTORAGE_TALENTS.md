@@ -242,7 +242,7 @@ const updated = updateTalent(creator.id, {
 
 ### LocalStorage Key
 ```
-pomelo_talents
+talentylabs_talents
 ```
 
 ### Format Stocké

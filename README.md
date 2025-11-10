@@ -1,6 +1,6 @@
-# CRM pour Agences d'Influenceurs
+# TalentyLabs - CRM pour Agences de Talents
 
-Une application SaaS CRM moderne pour gérer les influenceurs et créateurs de contenu, construite avec Next.js 15 et Better Auth.
+Une application SaaS CRM moderne pour gérer les talents et créateurs de contenu, construite avec Next.js 15 et Better Auth.
 
 ## 🚀 Stack Technique
 
@@ -25,7 +25,7 @@ Une application SaaS CRM moderne pour gérer les influenceurs et créateurs de c
 1. **Cloner le projet et installer les dépendances**
 
 ```bash
-cd influencer-crm
+cd talentylabs
 npm install
 ```
 
@@ -41,7 +41,7 @@ cp .env.example .env.local
 
 ```env
 # PostgreSQL connection string
-DATABASE_URL="postgresql://username:password@localhost:5432/influencer_crm"
+DATABASE_URL="postgresql://username:password@localhost:5432/talentylabs"
 
 # Générez une clé secrète aléatoire (min 32 caractères)
 BETTER_AUTH_SECRET="votre_clé_secrète_aléatoire_ici"
@@ -64,7 +64,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 psql -U postgres
 
 # Créez la base de données
-CREATE DATABASE influencer_crm;
+CREATE DATABASE talentylabs;
 
 # Quittez psql
 \q
@@ -131,7 +131,7 @@ npm run db:studio     # Ouvrir Drizzle Studio (UI pour la DB)
 ## 📁 Structure du Projet
 
 ```
-influencer-crm/
+talentylabs/
 ├── src/
 │   ├── app/
 │   │   ├── (auth)/              # Routes d'authentification

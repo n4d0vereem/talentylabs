@@ -124,7 +124,7 @@ Le dashboard affiche actuellement des données d'exemple pour :
 ### **Le design ne s'affiche pas correctement ?**
 ```bash
 # Vider le cache Next.js
-cd /Users/nadfaqou/Documents/leested_infrastructure/influencer-crm
+cd /Users/nadfaqou/Documents/leested_infrastructure/talentylabs
 rm -rf .next
 npm run dev
 ```

@@ -5,13 +5,14 @@ export interface Talent {
   firstName: string;
   lastName: string;
   birthDate: string;
-  height: string;
-  weight: string;
+  topSize: string;
+  bottomSize: string;
   shoeSize: string;
   address: string;
   phone: string;
   email: string;
   category: string;
+  foodIntolerances?: string;
   bio?: string;
   location?: string;
   image?: string;
@@ -27,7 +28,7 @@ export interface Talent {
   createdAt: string;
 }
 
-const STORAGE_KEY = 'pomelo_talents';
+const STORAGE_KEY = 'talentylabs_talents';
 
 // Talents par défaut (Jade et Saonara)
 const defaultTalents: Talent[] = [
@@ -36,8 +37,8 @@ const defaultTalents: Talent[] = [
     firstName: "Jade",
     lastName: "Gattoni",
     birthDate: "1998-03-15",
-    height: "172",
-    weight: "58",
+    topSize: "S",
+    bottomSize: "38",
     shoeSize: "38",
     address: "12 Rue de la Paix, 75002 Paris, France",
     phone: "+33 6 12 34 56 78",
@@ -62,8 +63,8 @@ const defaultTalents: Talent[] = [
     firstName: "Saonara",
     lastName: "Petto",
     birthDate: "1996-07-22",
-    height: "168",
-    weight: "55",
+    topSize: "M",
+    bottomSize: "36",
     shoeSize: "37",
     address: "Avenue Princesse Grace, 98000 Monaco",
     phone: "+377 97 98 12 34",

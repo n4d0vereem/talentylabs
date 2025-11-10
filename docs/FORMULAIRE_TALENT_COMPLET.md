@@ -204,7 +204,7 @@ Pour un design cohérent et reconnaissable :
 
 ## 🎨 Palette de Couleurs
 
-Cohérente avec le design POMELO :
+Cohérente avec le design TalentyLabs :
 
 - **Background** : `bg-[#fafaf9]` (beige très clair)
 - **Cards** : `bg-white` avec `border-black/5`

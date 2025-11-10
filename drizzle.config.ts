@@ -1,7 +1,12 @@
+import { config } from "dotenv";
+import { resolve } from "path";
 import type { Config } from "drizzle-kit";
 
+// Load .env.local
+config({ path: resolve(process.cwd(), ".env.local") });
+
 export default {
-  schema: "./src/lib/db/schema.ts",
+  schema: "./src/db/schema.ts",
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {

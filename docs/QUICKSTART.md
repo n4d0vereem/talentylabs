@@ -4,7 +4,7 @@
 
 ### 1. Installer les dépendances
 ```bash
-cd influencer-crm
+cd talentylabs
 npm install
 ```
 

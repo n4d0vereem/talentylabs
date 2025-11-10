@@ -59,7 +59,7 @@ Application SaaS CRM complète construite avec les technologies web les plus mod
 ## 📂 Architecture des fichiers
 
 ```
-influencer-crm/
+talentylabs/
 ├── src/
 │   ├── app/                    # Next.js App Router
 │   │   ├── (auth)/            # Groupe de routes publiques

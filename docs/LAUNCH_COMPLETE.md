@@ -75,7 +75,7 @@ You'll be automatically logged in and redirected to the dashboard!
 
 ```bash
 # Start development server (if not running)
-cd /Users/nadfaqou/Documents/leested_infrastructure/influencer-crm
+cd /Users/nadfaqou/Documents/leested_infrastructure/talentylabs
 npm run dev
 
 # The server will be available at: http://localhost:3000
@@ -263,7 +263,7 @@ npm run dev
 ## 📂 Project Location
 
 ```
-/Users/nadfaqou/Documents/leested_infrastructure/influencer-crm/
+/Users/nadfaqou/Documents/leested_infrastructure/talentylabs/
 ```
 
 ---

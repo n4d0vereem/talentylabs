@@ -5,30 +5,64 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Save, Upload, RotateCcw, ArrowLeft } from "lucide-react";
+import { Save, Upload, RotateCcw, ArrowLeft, Plus, X } from "lucide-react";
 import Link from "next/link";
-import { getAgencySettings, updateAgencySettings, resetAgencySettings, type AgencySettings } from "@/lib/agency-settings";
+import { useAgencyId } from "@/lib/temp-agency";
+import { getAgencySettings, updateAgencySettings, getCategories, createCategory, deleteCategory } from "@/lib/api-client";
+
+interface AgencySettings {
+  name: string;
+  logo?: string;
+  primaryColor: string;
+  useDefaultColors: boolean;
+}
 
 export default function SettingsPage() {
+  const { agencyId, isLoading: agencyLoading } = useAgencyId();
   const [settings, setSettings] = useState<AgencySettings>({
     name: "Eidoles",
     logo: "",
     primaryColor: "#000000",
-    secondaryColor: "#ff6b35",
     useDefaultColors: true,
   });
   
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [newCategory, setNewCategory] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const current = getAgencySettings();
-    setSettings(current);
-  }, []);
+    if (agencyLoading || !agencyId) return;
+    
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const [agencySettings, categoriesData] = await Promise.all([
+          getAgencySettings(agencyId),
+          getCategories(agencyId),
+        ]);
+        setSettings(agencySettings);
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error("Erreur lors du chargement des paramètres:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const handleSave = () => {
+    loadData();
+  }, [agencyId]);
+
+  const handleSave = async () => {
     setIsSaving(true);
     try {
-      updateAgencySettings(settings);
+      // Sauvegarder les paramètres via l'API
+      await updateAgencySettings(agencyId, settings);
+      
+      // Appliquer immédiatement les couleurs
+      const root = document.documentElement;
+      root.style.setProperty('--agency-primary', settings.primaryColor);
+      
       alert("✅ Paramètres sauvegardés avec succès !");
       
       // Rediriger vers le dashboard
@@ -42,14 +76,25 @@ export default function SettingsPage() {
     }
   };
 
-  const handleReset = () => {
-    if (confirm("Voulez-vous vraiment réinitialiser aux paramètres par défaut ?")) {
-      const defaults = resetAgencySettings();
-      setSettings(defaults);
-      alert("✅ Paramètres réinitialisés !");
-      setTimeout(() => {
-        window.location.reload();
-      }, 500);
+  const handleAddCategory = async () => {
+    if (!newCategory.trim()) return;
+    try {
+      const created = await createCategory({ name: newCategory.trim(), agencyId });
+      setCategories([...categories, created]);
+      setNewCategory("");
+    } catch (error) {
+      console.error("Erreur lors de l'ajout de la catégorie:", error);
+      alert("❌ Erreur lors de l'ajout");
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      await deleteCategory(id);
+      setCategories(categories.filter(c => c.id !== id));
+    } catch (error) {
+      console.error("Erreur lors de la suppression:", error);
+      alert("❌ Erreur lors de la suppression");
     }
   };
 
@@ -144,11 +189,11 @@ export default function SettingsPage() {
               <Label className="text-black/80 font-light">Logo de l'agence</Label>
               <div className="mt-2 flex items-center gap-4">
                 {settings.logo && (
-                  <div className="w-32 h-16 bg-black/5 rounded-xl flex items-center justify-center overflow-hidden">
+                  <div className="w-32 h-32 bg-black/5 rounded-xl flex items-center justify-center overflow-hidden p-2">
                     <img 
                       src={settings.logo} 
                       alt="Logo" 
-                      className="max-w-full max-h-full object-contain"
+                      className="w-full h-full object-contain"
                     />
                   </div>
                 )}
@@ -174,11 +219,14 @@ export default function SettingsPage() {
           </div>
         </Card>
 
-        {/* Personnalisation des couleurs */}
+        {/* Couleur d'accent */}
         <Card className="bg-white border border-black/5 rounded-3xl p-10">
-          <h2 className="text-2xl font-light text-black tracking-tight mb-8">
-            Personnalisation des couleurs
+          <h2 className="text-2xl font-light text-black tracking-tight mb-3">
+            Couleur d'accent
           </h2>
+          <p className="text-sm text-black/40 font-light mb-8">
+            Personnalisez subtilement l'apparence avec une couleur d'accent qui apparaîtra sur certains éléments interactifs
+          </p>
           
           <div className="space-y-6">
             <div className="flex items-center gap-3 p-4 bg-black/5 rounded-xl">
@@ -186,110 +234,145 @@ export default function SettingsPage() {
                 type="checkbox"
                 id="useDefaultColors"
                 checked={settings.useDefaultColors}
-                onChange={(e) => setSettings({ ...settings, useDefaultColors: e.target.checked })}
+                onChange={(e) => {
+                  const useDefault = e.target.checked;
+                  setSettings({ 
+                    ...settings, 
+                    useDefaultColors: useDefault,
+                    // Réinitialiser à la couleur par défaut si on coche
+                    primaryColor: useDefault ? '#000000' : settings.primaryColor
+                  });
+                }}
                 className="w-5 h-5 rounded border-black/20 text-black focus:ring-black"
               />
               <Label htmlFor="useDefaultColors" className="text-black/80 font-light cursor-pointer flex-1">
-                Utiliser les couleurs par défaut (Noir & Orange)
+                Utiliser la couleur par défaut (Noir)
               </Label>
             </div>
 
             {!settings.useDefaultColors && (
-              <div className="grid grid-cols-2 gap-6 pt-4">
-                <div>
-                  <Label htmlFor="primaryColor" className="text-black/80 font-light">
-                    Couleur primaire
-                  </Label>
-                  <div className="mt-2 flex items-center gap-3">
-                    <input
-                      type="color"
-                      id="primaryColor"
-                      value={settings.primaryColor}
-                      onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
-                      className="w-16 h-12 rounded-xl border border-black/10 cursor-pointer"
-                    />
-                    <Input
-                      type="text"
-                      value={settings.primaryColor}
-                      onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
-                      className="h-12 rounded-xl border-black/10 bg-black/5 text-black font-mono"
-                    />
-                  </div>
-                  <p className="text-xs text-black/40 font-light mt-2">
-                    Utilisée pour les boutons et accents principaux
-                  </p>
-                </div>
-
-                <div>
-                  <Label htmlFor="secondaryColor" className="text-black/80 font-light">
-                    Couleur secondaire
-                  </Label>
-                  <div className="mt-2 flex items-center gap-3">
-                    <input
-                      type="color"
-                      id="secondaryColor"
-                      value={settings.secondaryColor}
-                      onChange={(e) => setSettings({ ...settings, secondaryColor: e.target.value })}
-                      className="w-16 h-12 rounded-xl border border-black/10 cursor-pointer"
-                    />
-                    <Input
-                      type="text"
-                      value={settings.secondaryColor}
-                      onChange={(e) => setSettings({ ...settings, secondaryColor: e.target.value })}
-                      className="h-12 rounded-xl border-black/10 bg-black/5 text-black font-mono"
-                    />
-                  </div>
-                  <p className="text-xs text-black/40 font-light mt-2">
-                    Utilisée pour les accents secondaires
-                  </p>
+              <div className="pt-4">
+                <Label htmlFor="primaryColor" className="text-black/80 font-light">
+                  Choisir une couleur personnalisée
+                </Label>
+                <div className="mt-3 flex items-center gap-3">
+                  <input
+                    type="color"
+                    id="primaryColor"
+                    value={settings.primaryColor}
+                    onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
+                    className="w-16 h-12 rounded-xl border border-black/10 cursor-pointer"
+                  />
+                  <Input
+                    type="text"
+                    value={settings.primaryColor}
+                    onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
+                    className="h-12 rounded-xl border-black/10 bg-black/5 text-black font-mono"
+                    placeholder="#000000"
+                  />
                 </div>
               </div>
             )}
 
-            {/* Preview des couleurs */}
+            {/* Preview subtile */}
             <div className="mt-8 p-6 bg-black/5 rounded-2xl">
-              <p className="text-sm text-black/60 font-light mb-4">Aperçu du bouton principal :</p>
-              <div className="flex gap-4">
-                <Button 
+              <p className="text-sm text-black/60 font-light mb-4">Aperçu de la couleur d'accent :</p>
+              <div className="flex items-center gap-6">
+                {/* Barre colorée */}
+                <div 
+                  className="h-3 w-32 rounded-full transition-colors"
                   style={{ 
-                    backgroundColor: settings.useDefaultColors ? '#000000' : settings.primaryColor,
-                    color: 'white'
+                    backgroundColor: settings.primaryColor
                   }}
-                  className="rounded-full font-light"
+                />
+                {/* Petit cercle */}
+                <div 
+                  className="w-10 h-10 rounded-full transition-colors"
+                  style={{ 
+                    backgroundColor: settings.primaryColor
+                  }}
+                />
+                {/* Texte exemple */}
+                <span 
+                  className="text-sm font-medium transition-colors"
+                  style={{ 
+                    color: settings.primaryColor
+                  }}
                 >
-                  Exemple de bouton
-                </Button>
+                  Texte d'exemple
+                </span>
               </div>
             </div>
           </div>
         </Card>
 
-        {/* Boutons d'action */}
-        <div className="flex gap-4">
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex-1 bg-black hover:bg-black/80 text-white h-14 rounded-full font-light text-base"
-          >
-            {isSaving ? (
-              <>Sauvegarde...</>
-            ) : (
-              <>
-                <Save className="w-5 h-5 mr-2" />
-                Sauvegarder les paramètres
-              </>
-            )}
-          </Button>
+        {/* Catégories de talents */}
+        <Card className="bg-white border border-black/5 rounded-3xl p-10">
+          <h2 className="text-2xl font-light text-black tracking-tight mb-3">
+            Catégories de talents
+          </h2>
+          <p className="text-sm text-black/40 font-light mb-8">
+            Définissez les catégories disponibles lors de l'ajout d'un nouveau talent
+          </p>
           
-          <Button
-            onClick={handleReset}
-            variant="outline"
-            className="border-black/10 hover:bg-black/5 h-14 rounded-full font-light text-base px-8"
-          >
-            <RotateCcw className="w-5 h-5 mr-2" />
-            Réinitialiser
-          </Button>
-        </div>
+          <div className="space-y-4">
+            {/* Ajout de catégorie */}
+            <div className="flex gap-3">
+              <Input
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="Nouvelle catégorie..."
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && newCategory.trim()) {
+                    handleAddCategory();
+                  }
+                }}
+                className="flex-1 h-12 rounded-xl border-black/10 bg-black/5"
+              />
+              <Button
+                onClick={handleAddCategory}
+                className="btn-accent rounded-xl font-light h-12 px-6"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Ajouter
+              </Button>
+            </div>
+
+            {/* Liste des catégories */}
+            <div className="grid grid-cols-2 gap-3 mt-6">
+              {categories.map((category) => (
+                <div
+                  key={category.id}
+                  className="flex items-center justify-between p-3 bg-black/5 rounded-xl"
+                >
+                  <span className="text-sm font-light text-black">{category.name}</span>
+                  <button
+                    onClick={() => handleDeleteCategory(category.id)}
+                    className="text-black/40 hover:text-black transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        {/* Bouton de sauvegarde */}
+        <Button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="w-full btn-accent h-14 rounded-full font-light text-base disabled:opacity-50"
+        >
+          {isSaving ? (
+            <>Sauvegarde...</>
+          ) : (
+            <>
+              <Save className="w-5 h-5 mr-2" />
+              Sauvegarder les paramètres
+            </>
+          )}
+        </Button>
       </div>
     </div>
   );

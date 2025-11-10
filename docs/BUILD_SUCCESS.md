@@ -56,7 +56,7 @@ Visit: [http://localhost:3000](http://localhost:3000)
 ## 📁 Application Structure
 
 ```
-influencer-crm/
+talentylabs/
 ├── src/
 │   ├── app/
 │   │   ├── (auth)/

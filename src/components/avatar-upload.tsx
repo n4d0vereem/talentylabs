@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Upload, Camera, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,16 +14,13 @@ interface AvatarUploadProps {
 export function AvatarUpload({ currentImage, creatorName, onImageChange, className }: AvatarUploadProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [imageUrl, setImageUrl] = useState(() => {
-    // Charger depuis localStorage au démarrage
-    if (typeof window !== 'undefined') {
-      const storageKey = `talent_photo_${creatorName.replace(/\s/g, '_')}`;
-      const savedImage = localStorage.getItem(storageKey);
-      return savedImage || currentImage;
-    }
-    return currentImage;
-  });
+  const [imageUrl, setImageUrl] = useState(currentImage);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Synchroniser imageUrl avec currentImage
+  useEffect(() => {
+    setImageUrl(currentImage);
+  }, [currentImage]);
 
   const handleClick = () => {
     fileInputRef.current?.click();
@@ -79,46 +76,10 @@ export function AvatarUpload({ currentImage, creatorName, onImageChange, classNa
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
 
-          // Convertir en Base64 avec haute qualité (qualité 0.85)
-          const compressedImageUrl = canvas.toDataURL('image/jpeg', 0.85);
+          // Convertir en Base64 avec haute qualité (qualité 0.92 pour meilleure qualité)
+          const compressedImageUrl = canvas.toDataURL('image/jpeg', 0.92);
           
           setImageUrl(compressedImageUrl);
-          
-          // Sauvegarder dans localStorage avec gestion du quota
-          const storageKey = `talent_photo_${creatorName.replace(/\s/g, '_')}`;
-          try {
-            // Supprimer l'ancienne photo d'abord pour libérer de l'espace
-            const oldImage = localStorage.getItem(storageKey);
-            if (oldImage) {
-              localStorage.removeItem(storageKey);
-            }
-            
-            // Essayer de sauvegarder la nouvelle
-            localStorage.setItem(storageKey, compressedImageUrl);
-          } catch (quotaError) {
-            console.error('LocalStorage quota exceeded:', quotaError);
-            
-            // Essayer de nettoyer les vieilles photos et réessayer
-            try {
-              // Garder seulement les photos des talents actuels
-              const talentsKeys = Object.keys(localStorage).filter(key => key.startsWith('talent_photo_'));
-              if (talentsKeys.length > 0) {
-                // Supprimer la plus vieille
-                localStorage.removeItem(talentsKeys[0]);
-                // Réessayer
-                localStorage.setItem(storageKey, compressedImageUrl);
-              } else {
-                alert('Erreur: Espace de stockage insuffisant. Veuillez vider le cache du navigateur.');
-                setIsUploading(false);
-                return;
-              }
-            } catch (retryError) {
-              alert('Erreur: Impossible de sauvegarder l\'image. Espace de stockage insuffisant.');
-              setIsUploading(false);
-              return;
-            }
-          }
-          
           onImageChange?.(compressedImageUrl);
           setIsUploading(false);
         };
@@ -156,14 +117,22 @@ export function AvatarUpload({ currentImage, creatorName, onImageChange, classNa
         )}
       >
         {/* Image */}
-        <img 
-          src={imageUrl}
-          alt={creatorName}
-          className={cn(
-            "w-full h-full object-cover transition-all duration-300",
-            isHovered && !isUploading && "brightness-75 scale-110"
-          )}
-        />
+        {imageUrl ? (
+          <img 
+            src={imageUrl}
+            alt={creatorName}
+            className={cn(
+              "w-full h-full object-cover transition-all duration-300",
+              isHovered && !isUploading && "brightness-75 scale-110"
+            )}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-stone-100 to-stone-200">
+            <span className="text-4xl font-light text-stone-400">
+              {creatorName?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
+            </span>
+          </div>
+        )}
 
         {/* Overlay au hover */}
         {isHovered && !isUploading && (

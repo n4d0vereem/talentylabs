@@ -31,7 +31,7 @@ Hello Eidoles 👋
 ```
 
 ### Sidebar
-**Avant** : Logo "pomelo" fixe
+**Avant** : Logo "talentylabs" fixe
 
 **Maintenant** : Logo + nom de l'agence personnalisables
 ```
@@ -169,7 +169,7 @@ Hello [Nom de l'agence] 👋
 
 ## 💾 Persistance
 
-- **LocalStorage Key** : `pomelo_agency_settings`
+- **LocalStorage Key** : `talentylabs_agency_settings`
 - **Format** : JSON compressé
 - **Persistance** : Même après refresh/fermeture navigateur
 - **Logo** : Compressé en Base64 (PNG @ 90%)

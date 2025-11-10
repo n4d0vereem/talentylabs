@@ -9,17 +9,21 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { addTalent } from "@/lib/talents-storage";
+import { createTalent } from "@/lib/api-client";
+import { getCategories } from "@/lib/api-client";
+import { useAgencyId } from "@/lib/temp-agency";
 
 const addCreatorSchema = z.object({
   firstName: z.string().min(1, "Le prénom est requis."),
   lastName: z.string().min(1, "Le nom est requis."),
   birthDate: z.string().min(1, "La date de naissance est requise."),
-  height: z.string().min(1, "La taille est requise."),
-  weight: z.string().min(1, "Le poids est requis."),
-  shoeSize: z.string().min(1, "La pointure est requise."),
+  category: z.string().min(1, "La catégorie est requise."),
+  topSize: z.string().optional(),
+  bottomSize: z.string().optional(),
+  shoeSize: z.string().optional(),
+  foodIntolerances: z.string().optional(),
   address: z.string().min(1, "L'adresse est requise."),
   phone: z.string().min(1, "Le numéro de téléphone est requis."),
   instagram: z.string().optional(),
@@ -37,15 +41,34 @@ type AddCreatorFormValues = z.infer<typeof addCreatorSchema>;
 
 export default function AddCreatorPage() {
   const router = useRouter();
+  const { agencyId, isLoading: agencyLoading } = useAgencyId();
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  
+  useEffect(() => {
+    if (agencyLoading || !agencyId) return;
+    
+    const loadCategories = async () => {
+      try {
+        const cats = await getCategories(agencyId);
+        setCategories(cats);
+      } catch (error) {
+        console.error("Erreur lors du chargement des catégories:", error);
+      }
+    };
+    loadCategories();
+  }, [agencyId, agencyLoading]);
+  
   const form = useForm<AddCreatorFormValues>({
     resolver: zodResolver(addCreatorSchema),
     defaultValues: {
       firstName: "",
       lastName: "",
       birthDate: "",
-      height: "",
-      weight: "",
+      category: "",
+      topSize: "",
+      bottomSize: "",
       shoeSize: "",
+      foodIntolerances: "",
       address: "",
       phone: "",
       instagram: "",
@@ -57,34 +80,33 @@ export default function AddCreatorPage() {
   const { register, handleSubmit, formState, reset } = form;
   const { errors, isSubmitting } = formState;
 
-  const onSubmit = (data: AddCreatorFormValues) => {
+  const onSubmit = async (data: AddCreatorFormValues) => {
     try {
       // Créer un email à partir du nom et prénom
       const email = `${data.firstName.toLowerCase()}.${data.lastName.toLowerCase()}@eidoles.com`;
       
-      // Déterminer la catégorie automatiquement (peut être modifié plus tard)
-      const category = "Influenceur";
-      
       // Extraire la ville de l'adresse
       const location = data.address.split(',').slice(-2).join(',').trim();
       
-      // Ajouter le talent au localStorage
-      const newTalent = addTalent({
+      // Ajouter le talent via l'API
+      const newTalent = await createTalent({
         firstName: data.firstName,
         lastName: data.lastName,
         birthDate: data.birthDate,
-        height: data.height,
-        weight: data.weight,
-        shoeSize: data.shoeSize,
+        topSize: data.topSize || "",
+        bottomSize: data.bottomSize || "",
+        shoeSize: data.shoeSize || "",
+        foodIntolerances: data.foodIntolerances || undefined,
         address: data.address,
         phone: data.phone,
         email: email,
-        category: category,
+        category: data.category,
         location: location,
         bio: `Talent ajouté le ${new Date().toLocaleDateString('fr-FR')}`,
         instagram: data.instagram || undefined,
         tiktok: data.tiktok || undefined,
         snapchat: data.snapchat || undefined,
+        agencyId: agencyId,
       });
 
       console.log("Nouveau talent ajouté:", newTalent);
@@ -174,6 +196,28 @@ export default function AddCreatorPage() {
                   <p className="text-red-500 text-sm mt-1">{errors.birthDate.message}</p>
                 )}
               </div>
+
+              <div>
+                <Label htmlFor="category" className="text-black/80 font-light">
+                  Catégorie <span className="text-red-500">*</span>
+                </Label>
+                <select
+                  id="category"
+                  {...register("category")}
+                  className="mt-2 h-12 w-full rounded-xl border border-black/10 bg-black/5 text-black font-light px-4"
+                >
+                  <option value="">Sélectionner une catégorie...</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.name}>{cat.name}</option>
+                  ))}
+                </select>
+                {errors.category && (
+                  <p className="text-red-500 text-sm mt-1">{errors.category.message}</p>
+                )}
+                <p className="text-xs text-black/40 font-light mt-2">
+                  Les catégories peuvent être gérées dans les paramètres
+                </p>
+              </div>
             </CardContent>
           </Card>
 
@@ -187,38 +231,38 @@ export default function AddCreatorPage() {
             <CardContent className="p-0">
               <div className="grid grid-cols-3 gap-6">
                 <div>
-                  <Label htmlFor="height" className="text-black/80 font-light">
-                    Taille (cm) <span className="text-red-500">*</span>
+                  <Label htmlFor="topSize" className="text-black/80 font-light">
+                    Taille du haut
                   </Label>
                   <Input
-                    id="height"
+                    id="topSize"
                     type="text"
-                    placeholder="170"
-                    {...register("height")}
+                    placeholder="S, M, L, XL..."
+                    {...register("topSize")}
                     className="mt-2 h-12 rounded-xl border-black/10 bg-black/5 text-black placeholder:text-black/40 focus:border-black focus:ring-0"
                   />
-                  {errors.height && (
-                    <p className="text-red-500 text-sm mt-1">{errors.height.message}</p>
+                  {errors.topSize && (
+                    <p className="text-red-500 text-sm mt-1">{errors.topSize.message}</p>
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="weight" className="text-black/80 font-light">
-                    Poids (kg) <span className="text-red-500">*</span>
+                  <Label htmlFor="bottomSize" className="text-black/80 font-light">
+                    Taille du bas
                   </Label>
                   <Input
-                    id="weight"
+                    id="bottomSize"
                     type="text"
-                    placeholder="60"
-                    {...register("weight")}
+                    placeholder="36, 38, 40..."
+                    {...register("bottomSize")}
                     className="mt-2 h-12 rounded-xl border-black/10 bg-black/5 text-black placeholder:text-black/40 focus:border-black focus:ring-0"
                   />
-                  {errors.weight && (
-                    <p className="text-red-500 text-sm mt-1">{errors.weight.message}</p>
+                  {errors.bottomSize && (
+                    <p className="text-red-500 text-sm mt-1">{errors.bottomSize.message}</p>
                   )}
                 </div>
                 <div>
                   <Label htmlFor="shoeSize" className="text-black/80 font-light">
-                    Pointure <span className="text-red-500">*</span>
+                    Pointure
                   </Label>
                   <Input
                     id="shoeSize"
@@ -231,6 +275,19 @@ export default function AddCreatorPage() {
                     <p className="text-red-500 text-sm mt-1">{errors.shoeSize.message}</p>
                   )}
                 </div>
+              </div>
+              
+              <div className="pt-4">
+                <Label htmlFor="foodIntolerances" className="text-black/80 font-light">
+                  Intolérances alimentaires
+                </Label>
+                <Input
+                  id="foodIntolerances"
+                  type="text"
+                  placeholder="Gluten, lactose, fruits à coque..."
+                  {...register("foodIntolerances")}
+                  className="mt-2 h-12 rounded-xl border-black/10 bg-black/5 text-black placeholder:text-black/40 focus:border-black focus:ring-0"
+                />
               </div>
             </CardContent>
           </Card>
@@ -340,20 +397,20 @@ export default function AddCreatorPage() {
 
           {/* Boutons */}
           <div className="flex gap-4">
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex-1 bg-black hover:bg-black/80 text-white h-14 rounded-full font-light text-base"
-            >
-              {isSubmitting ? (
-                <>Ajout en cours...</>
-              ) : (
-                <>
-                  <Plus className="w-5 h-5 mr-2" />
-                  Ajouter le talent
-                </>
-              )}
-            </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-1 btn-accent h-14 rounded-full font-light text-base disabled:opacity-50"
+              >
+                {isSubmitting ? (
+                  <>Ajout en cours...</>
+                ) : (
+                  <>
+                    <Plus className="w-5 h-5 mr-2" />
+                    Ajouter le talent
+                  </>
+                )}
+              </Button>
             
             <Link href="/dashboard" className="flex-1">
               <Button

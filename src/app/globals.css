@@ -28,9 +28,8 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
     
-    /* Couleurs personnalisables de l'agence */
-    --agency-primary: #000000;
-    --agency-secondary: #ff6b35;
+      /* Couleur d'accent personnalisable de l'agence */
+      --agency-primary: #000000;
   }
 
   .dark {
@@ -82,4 +81,201 @@
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
   }
+}
+
+/* Classe pour les boutons avec couleur d'accent personnalisable */
+@layer utilities {
+  .btn-accent {
+    background-color: var(--agency-primary);
+    color: white;
+  }
+  
+  .btn-accent:hover {
+    opacity: 0.9;
+  }
+}
+
+/* Styles personnalisés pour react-big-calendar - design épuré et moderne */
+.calendar-modern .rbc-calendar {
+  font-family: inherit;
+  font-weight: 300;
+}
+
+.calendar-modern .rbc-header {
+  padding: 16px 12px;
+  font-weight: 500;
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: transparent;
+}
+
+.calendar-modern .rbc-today {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.calendar-modern .rbc-toolbar {
+  display: none;
+}
+
+.calendar-modern .rbc-month-view,
+.calendar-modern .rbc-time-view,
+.calendar-modern .rbc-agenda-view {
+  border: none;
+}
+
+.calendar-modern .rbc-event {
+  padding: 6px 10px;
+  border: none !important;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.calendar-modern .rbc-event-content {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-modern .rbc-date-cell {
+  padding: 10px;
+  text-align: right;
+  font-weight: 300;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.calendar-modern .rbc-date-cell.rbc-now {
+  font-weight: 600;
+}
+
+.calendar-modern .rbc-off-range {
+  color: rgba(0, 0, 0, 0.2);
+}
+
+.calendar-modern .rbc-off-range-bg {
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.calendar-modern .rbc-month-row {
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+  min-height: 100px;
+}
+
+.calendar-modern .rbc-day-bg {
+  border-left: 1px solid rgba(0, 0, 0, 0.04);
+  transition: background-color 0.2s;
+}
+
+.calendar-modern .rbc-day-bg:hover {
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.calendar-modern .rbc-time-slot {
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
+  min-height: 40px;
+}
+
+.calendar-modern .rbc-time-header-content {
+  border-left: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.calendar-modern .rbc-time-content {
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.calendar-modern .rbc-day-slot .rbc-time-slot {
+  border-top: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.calendar-modern .rbc-current-time-indicator {
+  background-color: #667eea;
+  height: 2px;
+}
+
+.calendar-modern .rbc-show-more {
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 12px;
+  font-weight: 400;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.calendar-modern .rbc-show-more:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(0, 0, 0, 0.8);
+}
+
+.calendar-modern .rbc-event:hover {
+  opacity: 0.85;
+  transition: opacity 0.2s;
+}
+
+/* Week view styles */
+.calendar-modern .rbc-time-header-cell {
+  padding: 12px 8px;
+}
+
+.calendar-modern .rbc-time-header-content {
+  border-left-color: rgba(0, 0, 0, 0.04);
+}
+
+.calendar-modern .rbc-allday-cell {
+  display: none;
+}
+
+.calendar-modern .rbc-time-column {
+  min-width: 70px;
+}
+
+.calendar-modern .rbc-timeslot-group {
+  min-height: 60px;
+  border-left: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.calendar-modern .rbc-label {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.4);
+  font-weight: 400;
+  padding: 0 12px;
+}
+
+.calendar-modern .rbc-time-header-gutter {
+  min-width: 70px;
+}
+
+.calendar-modern .rbc-time-header {
+  overflow: visible !important;
+}
+
+.calendar-modern .rbc-time-content {
+  padding-top: 0;
+}
+
+.calendar-modern .rbc-day-slot {
+  position: relative;
+}
+
+.calendar-modern .rbc-events-container {
+  margin-right: 10px;
+}
+
+.calendar-modern .rbc-time-slot {
+  min-height: 60px;
+}
+
+.calendar-modern .rbc-addons-dnd .rbc-addons-dnd-resizable {
+  position: relative;
+  width: calc(100% - 10px) !important;
+  margin-right: 10px;
+}
+
+.calendar-modern .rbc-event {
+  max-width: 100%;
+}
+
+.calendar-modern .rbc-addons-dnd-drag-preview {
+  opacity: 0.7;
 }

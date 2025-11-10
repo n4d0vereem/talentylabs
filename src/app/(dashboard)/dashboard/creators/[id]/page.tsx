@@ -3,145 +3,182 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Instagram, Mail, MapPin, Calendar, Link as LinkIcon, FileText, Image, Edit, Save, X, Phone, Ruler, Weight, Footprints } from "lucide-react";
+import { Instagram, Phone, FileText, Image, Edit, Save, X, Footprints, TrendingUp, DollarSign, Target, Upload, Users, Heart, Eye, Calendar, Plus, Trash2, Briefcase } from "lucide-react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { AvatarUpload } from "@/components/avatar-upload";
 import { useState, useEffect } from "react";
-import { getTalentById, updateTalent, type Talent } from "@/lib/talents-storage";
+import { getTalentById, updateTalent, getInsights, saveInsights, getMediaKit, saveMediaKit, deleteMediaKit, getCollaborations, createCollaboration, updateCollaboration as updateCollaborationAPI, deleteCollaboration as deleteCollaborationAPI, reorderCollaborations, getCategories } from "@/lib/api-client";
+import { Card } from "@/components/ui/card";
+import { TalentCalendar } from "@/components/talent-calendar";
+import { useAgencyId } from "@/lib/temp-agency";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
-// Données des créateurs Eidoles
-const creatorsData = [
-  {
-    id: "1",
-    firstName: "Jade",
-    lastName: "Gattoni",
-    nickname: "gattoni.jd",
-    birthDate: "1998-03-15",
-    height: "172",
-    weight: "58",
-    shoeSize: "38",
-    address: "12 Rue de la Paix, 75002 Paris, France",
-    phone: "+33 6 12 34 56 78",
-    category: "Lifestyle & Fashion",
-    bio: "Créatrice de contenu passionnée par la mode, le lifestyle et les voyages. Collaborations authentiques et créatives.",
-    location: "Paris, France",
-    email: "jade.gattoni@eidoles.com",
-    joinedDate: "Janvier 2023",
-    image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
-    instagram: {
-      handle: "@gattoni.jd",
-      url: "https://www.instagram.com/gattoni.jd",
-      followers: "127K",
-      following: "1,245",
-      posts: "856",
-      engagement: "4.8%",
-      avgLikes: "6.1K",
-      avgComments: "342",
-      avgShares: "89",
-      demographics: {
-        audience: "18-34 ans (72%)",
-        location: "France (68%), Europe (24%)",
-        gender: "Femmes (64%), Hommes (36%)"
-      }
-    },
-    tiktok: {
-      handle: "@gattoni.jd",
-      url: "https://www.tiktok.com/@gattoni.jd"
-    },
-    snapchat: {
-      handle: "gattoni_jd",
-      url: "https://www.snapchat.com/add/gattoni_jd"
-    },
-    links: [
-      { name: "Instagram", url: "https://www.instagram.com/gattoni.jd", type: "social" },
-      { name: "TikTok", url: "https://www.tiktok.com/@gattoni.jd", type: "social" },
-      { name: "Snapchat", url: "https://www.snapchat.com/add/gattoni_jd", type: "social" },
-      { name: "Email Pro", url: "mailto:jade.gattoni@eidoles.com", type: "contact" }
-    ],
-    documents: [
-      { name: "Passeport", type: "ID", uploadDate: "15 Jan 2024" },
-      { name: "Carte d'identité", type: "ID", uploadDate: "15 Jan 2024" },
-      { name: "Contrat Eidoles", type: "Contrat", uploadDate: "10 Jan 2024" },
-      { name: "Photo professionnelle", type: "Photo", uploadDate: "20 Fév 2024" }
-    ],
-    recentCampaigns: [
-      { brand: "Louis Vuitton", date: "Oct 2024", performance: "+12% engagement" },
-      { brand: "Dior", date: "Sept 2024", performance: "8.2K likes" },
-      { brand: "Sézane", date: "Août 2024", performance: "145 conversions" }
-    ]
-  },
-  {
-    id: "2",
-    firstName: "Saonara",
-    lastName: "Petto",
-    nickname: "saonarapetto",
-    birthDate: "1996-07-22",
-    height: "168",
-    weight: "55",
-    shoeSize: "37",
-    address: "Avenue Princesse Grace, 98000 Monaco",
-    phone: "+377 97 98 12 34",
-    category: "Fashion & Beauty",
-    bio: "Influenceuse mode et beauté. Passionnée par les tendances et le style. Partenariats créatifs avec des marques premium.",
-    location: "Monaco",
-    email: "saonara@eidoles.com",
-    joinedDate: "Mars 2022",
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=400&fit=crop",
-    instagram: {
-      handle: "@saonarapetto",
-      url: "https://www.instagram.com/saonarapetto",
-      followers: "94.2K",
-      following: "892",
-      posts: "743",
-      engagement: "5.2%",
-      avgLikes: "4.9K",
-      avgComments: "298",
-      avgShares: "76",
-      demographics: {
-        audience: "18-34 ans (78%)",
-        location: "France (45%), Monaco (22%), Suisse (15%)",
-        gender: "Femmes (71%), Hommes (29%)"
-      }
-    },
-    tiktok: {
-      handle: "@saonarapetto",
-      url: "https://www.tiktok.com/@saonarapetto"
-    },
-    links: [
-      { name: "Instagram", url: "https://www.instagram.com/saonarapetto", type: "social" },
-      { name: "TikTok", url: "https://www.tiktok.com/@saonarapetto", type: "social" },
-      { name: "Email Pro", url: "mailto:saonara@eidoles.com", type: "contact" }
-    ],
-    documents: [
-      { name: "Passeport", type: "ID", uploadDate: "10 Mar 2022" },
-      { name: "Contrat Eidoles", type: "Contrat", uploadDate: "05 Mar 2022" }
-    ],
-    recentCampaigns: [
-      { brand: "Chanel Beauty", date: "Oct 2024", performance: "+15% engagement" },
-      { brand: "Hermès", date: "Sept 2024", performance: "9.8K likes" },
-      { brand: "Cartier", date: "Juil 2024", performance: "210 conversions" }
-    ]
-  }
-];
+interface Talent {
+  id: string;
+  firstName: string;
+  lastName: string;
+  birthDate?: string;
+  category?: string;
+  topSize?: string;
+  bottomSize?: string;
+  shoeSize?: string;
+  foodIntolerances?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  bio?: string;
+  location?: string;
+  image?: string;
+  instagram?: string;
+  tiktok?: string;
+  snapchat?: string;
+  instagramData?: {
+    handle: string;
+    followers: string;
+    engagement: string;
+    avgLikes: string;
+  };
+}
+
+interface Collaboration {
+  id: string;
+  talentId: string;
+  brandId: string;
+  marque: string;
+  mois: string;
+  contenu?: string;
+  datePreview?: string;
+  datePublication?: string;
+  budget: string;
+  type: "entrant" | "sortant";
+  gestionnaire?: string;
+  facture?: string;
+  displayOrder?: number;
+  statut: "en_cours" | "termine" | "annule";
+  createdAt?: string;
+}
+
+// Composant pour une ligne draggable
+function SortableRow({ collab, onEdit }: { collab: Collaboration; onEdit: (collab: Collaboration) => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: collab.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    cursor: isDragging ? 'grabbing' : 'grab',
+  };
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="hover:bg-black/5 transition-colors"
+    >
+      <td className="px-6 py-4" onClick={() => onEdit(collab)}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-black to-black/80 flex items-center justify-center flex-shrink-0">
+            <span className="text-sm font-medium text-white">
+              {collab.marque.substring(0, 2).toUpperCase()}
+            </span>
+          </div>
+          <span className="text-sm font-medium text-black">{collab.marque}</span>
+        </div>
+      </td>
+      <td className="px-6 py-4 text-sm text-black/70" onClick={() => onEdit(collab)}>{collab.mois}</td>
+      <td className="px-6 py-4 text-sm text-black/70 max-w-md" onClick={() => onEdit(collab)}>{collab.contenu || "-"}</td>
+      <td className="px-6 py-4 text-sm text-black/70 whitespace-nowrap" onClick={() => onEdit(collab)}>
+        {collab.datePreview || "-"}
+      </td>
+      <td className="px-6 py-4 text-sm text-black/70 whitespace-nowrap" onClick={() => onEdit(collab)}>
+        {collab.datePublication || "-"}
+      </td>
+      <td className="px-6 py-4 text-sm font-medium text-black whitespace-nowrap" onClick={() => onEdit(collab)}>
+        {collab.budget}€
+      </td>
+      <td className="px-6 py-4" onClick={() => onEdit(collab)}>
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+            collab.type === "entrant"
+              ? "bg-green-100 text-green-700"
+              : "bg-orange-100 text-orange-700"
+          }`}
+        >
+          {collab.type === "entrant" ? "Entrant" : "Sortant"}
+        </span>
+      </td>
+      <td className="px-6 py-4 text-sm text-black/70" onClick={() => onEdit(collab)}>{collab.gestionnaire || "-"}</td>
+      <td className="px-6 py-4" onClick={() => onEdit(collab)}>
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+            collab.statut === "en_cours"
+              ? "bg-blue-100 text-blue-700"
+              : collab.statut === "termine"
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
+          }`}
+        >
+          {collab.statut === "en_cours"
+            ? "En cours"
+            : collab.statut === "termine"
+            ? "Terminé"
+            : "Annulé"}
+        </span>
+      </td>
+      <td className="px-6 py-4 text-sm text-black/70" onClick={() => onEdit(collab)}>{collab.facture || "-"}</td>
+      <td className="px-6 py-4 text-right">
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(collab);
+          }}
+          variant="ghost"
+          size="sm"
+          className="rounded-full hover:bg-black/5"
+        >
+          <Edit className="w-4 h-4" />
+        </Button>
+      </td>
+    </tr>
+  );
+}
 
 export default function CreatorProfilePage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { agencyId } = useAgencyId();
   const creatorId = params.id as string;
   const activeTab = searchParams.get('tab') || 'overview';
   
-  // State pour gérer le talent, l'édition et la photo
   const [creator, setCreator] = useState<Talent | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [creatorImage, setCreatorImage] = useState("");
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditingInsights, setIsEditingInsights] = useState(false);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [mediakitUrl, setMediakitUrl] = useState<string | null>(null);
   const [editedData, setEditedData] = useState({
     firstName: "",
     lastName: "",
     birthDate: "",
-    height: "",
-    weight: "",
+    category: "",
+    topSize: "",
+    bottomSize: "",
     shoeSize: "",
+    foodIntolerances: "",
     address: "",
     phone: "",
     email: "",
@@ -151,68 +188,196 @@ export default function CreatorProfilePage() {
     tiktok: "",
     snapchat: "",
   });
+  const [insightsData, setInsightsData] = useState({
+    instagramFollowers: "",
+    instagramEngagement: "",
+    instagramAvgLikes: "",
+    instagramGrowth: "",
+    tiktokFollowers: "",
+    tiktokEngagement: "",
+    tiktokViews: "",
+    snapchatFollowers: "",
+    snapchatViews: "",
+  });
 
-  // Charger le talent depuis localStorage
-  useEffect(() => {
-    const talent = getTalentById(creatorId);
-    if (talent) {
-      setCreator(talent);
-      
-      // Charger la photo depuis localStorage
-      const storageKey = `talent_photo_${talent.firstName}_${talent.lastName}`;
-      const savedImage = localStorage.getItem(storageKey);
-      setCreatorImage(savedImage || talent.image || `https://ui-avatars.com/api/?name=${talent.firstName}+${talent.lastName}&size=400&background=random`);
-      
-      // Initialiser les données d'édition
-      setEditedData({
-        firstName: talent.firstName,
-        lastName: talent.lastName,
-        birthDate: talent.birthDate,
-        height: talent.height,
-        weight: talent.weight,
-        shoeSize: talent.shoeSize,
-        address: talent.address,
-        phone: talent.phone,
-        email: talent.email,
-        location: talent.location || "",
-        bio: talent.bio || "",
-        instagram: talent.instagram || "",
-        tiktok: talent.tiktok || "",
-        snapchat: talent.snapchat || "",
-      });
+  const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
+  const [isAddingCollab, setIsAddingCollab] = useState(false);
+  const [isEditingCollab, setIsEditingCollab] = useState(false);
+  const [selectedCollab, setSelectedCollab] = useState<Collaboration | null>(null);
+  const [collabFormData, setCollabFormData] = useState({
+    marque: "",
+    mois: "",
+    contenu: "",
+    datePreview: "",
+    datePublication: "",
+    budget: "",
+    type: "entrant" as "entrant" | "sortant",
+    gestionnaire: "",
+    facture: "",
+    statut: "en_cours" as "en_cours" | "termine" | "annule",
+  });
+
+  // Sensors pour le drag and drop avec press delay
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Gérer la fin du drag
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = collaborations.findIndex((c) => c.id === active.id);
+      const newIndex = collaborations.findIndex((c) => c.id === over.id);
+
+      const newCollaborations = arrayMove(collaborations, oldIndex, newIndex);
+      setCollaborations(newCollaborations);
+
+      // Sauvegarder le nouvel ordre dans la base de données
+      try {
+        const orders = newCollaborations.map((collab, index) => ({
+          id: collab.id,
+          displayOrder: index,
+        }));
+        await reorderCollaborations(orders);
+      } catch (error) {
+        console.error("Erreur lors de la sauvegarde de l'ordre:", error);
+        // Revenir à l'ordre précédent en cas d'erreur
+        setCollaborations(collaborations);
+      }
     }
-  }, [creatorId]);
+  };
 
-  if (!creator) {
-    return (
-      <div className="min-h-screen bg-[#fafaf9] p-8 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-3xl font-light text-black mb-4">Talent introuvable</h1>
-          <p className="text-black/40 font-light mb-8">
-            Ce profil n'existe pas ou a été supprimé.
-          </p>
-          <Link href="/dashboard">
-            <Button className="bg-black hover:bg-black/80 text-white rounded-full font-light">
-              Retour au dashboard
-            </Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        
+        if (!agencyId) return;
+        
+        // Charger les catégories via l'API
+        const cats = await getCategories(agencyId);
+        setCategories(cats.map((c: any) => c.name));
+        
+        // Charger le talent via l'API
+        const talent = await getTalentById(creatorId);
+        if (talent) {
+          setCreator(talent);
+          setCreatorImage(talent.image || `https://ui-avatars.com/api/?name=${talent.firstName}+${talent.lastName}&size=400&background=random`);
+          
+          setEditedData({
+            firstName: talent.firstName,
+            lastName: talent.lastName,
+            birthDate: talent.birthDate || "",
+            category: talent.category || "",
+            topSize: talent.topSize || "",
+            bottomSize: talent.bottomSize || "",
+            shoeSize: talent.shoeSize || "",
+            foodIntolerances: talent.foodIntolerances || "",
+            address: talent.address || "",
+            phone: talent.phone || "",
+            email: talent.email || "",
+            location: talent.location || "",
+            bio: talent.bio || "",
+            instagram: talent.instagram || "",
+            tiktok: talent.tiktok || "",
+            snapchat: talent.snapchat || "",
+          });
 
-  const handleSave = () => {
+          // Charger les insights via l'API
+          const insights = await getInsights(creatorId);
+          if (insights && insights.id) {
+            setInsightsData({
+              instagramFollowers: insights.instagramFollowers || "",
+              instagramEngagement: insights.instagramEngagement || "",
+              instagramAvgLikes: insights.instagramAvgLikes || "",
+              instagramGrowth: insights.instagramGrowth || "+2.5K",
+              tiktokFollowers: insights.tiktokFollowers || "",
+              tiktokEngagement: insights.tiktokEngagement || "",
+              tiktokViews: insights.tiktokViews || "",
+              snapchatFollowers: insights.snapchatFollowers || "",
+              snapchatViews: insights.snapchatViews || "",
+            });
+          } else {
+            // Données par défaut depuis instagramData si disponible
+            setInsightsData({
+              instagramFollowers: talent.instagramData?.followers || "",
+              instagramEngagement: talent.instagramData?.engagement || "",
+              instagramAvgLikes: talent.instagramData?.avgLikes || "",
+              instagramGrowth: "+2.5K",
+              tiktokFollowers: "",
+              tiktokEngagement: "",
+              tiktokViews: "",
+              snapchatFollowers: "",
+              snapchatViews: "",
+            });
+          }
+
+          // Charger le media kit via l'API
+          const mediakit = await getMediaKit(creatorId);
+          if (mediakit && mediakit.pdfUrl) {
+            setMediakitUrl(mediakit.pdfUrl);
+          }
+
+          // Charger les collaborations via l'API
+          const collabs = await getCollaborations(creatorId);
+          setCollaborations(collabs);
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des données:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [creatorId, agencyId]);
+
+  // Auto-save de l'image dès qu'elle change
+  useEffect(() => {
+    const saveImage = async () => {
+      if (!creator || !creatorImage) return;
+      
+      // Ne sauvegarder que si l'image a vraiment changé (pas juste le chargement initial)
+      if (creatorImage === creator.image || creatorImage.includes('ui-avatars.com')) return;
+      
+      try {
+        console.log("💾 Auto-save de l'image du talent...");
+        await updateTalent(creator.id, { image: creatorImage });
+        console.log("✅ Image sauvegardée automatiquement");
+        
+        // Mettre à jour le creator pour refléter le changement
+        setCreator({ ...creator, image: creatorImage });
+      } catch (error) {
+        console.error("Erreur lors de la sauvegarde automatique de l'image:", error);
+      }
+    };
+
+    // Délai de 500ms pour éviter les saves multiples lors du chargement
+    const timer = setTimeout(saveImage, 500);
+    return () => clearTimeout(timer);
+  }, [creatorImage, creator]);
+
+  const handleSave = async () => {
     if (!creator) return;
-    
     try {
-      // Mettre à jour le talent dans localStorage
-      const updated = updateTalent(creator.id, {
+      const updated = await updateTalent(creator.id, {
         firstName: editedData.firstName,
         lastName: editedData.lastName,
         birthDate: editedData.birthDate,
-        height: editedData.height,
-        weight: editedData.weight,
+        category: editedData.category,
+        topSize: editedData.topSize,
+        bottomSize: editedData.bottomSize,
         shoeSize: editedData.shoeSize,
+        foodIntolerances: editedData.foodIntolerances,
         address: editedData.address,
         phone: editedData.phone,
         email: editedData.email,
@@ -221,507 +386,1551 @@ export default function CreatorProfilePage() {
         instagram: editedData.instagram,
         tiktok: editedData.tiktok,
         snapchat: editedData.snapchat,
+        image: creatorImage, // Sauvegarder l'image !
       });
 
       if (updated) {
         setCreator(updated);
-        setIsEditing(false);
-        alert("✅ Profil mis à jour avec succès !");
+        setIsEditMode(false);
+        alert("✅ Profil mis à jour !");
       }
     } catch (error) {
-      console.error("Erreur lors de la mise à jour:", error);
+      alert("❌ Erreur");
+    }
+  };
+
+  const handleSaveInsights = async () => {
+    if (!creator) return;
+    try {
+      // Sauvegarder les insights via l'API
+      await saveInsights({
+        talentId: creator.id,
+        ...insightsData,
+      });
+      setIsEditingInsights(false);
+      
+      alert("✅ Insights mis à jour !");
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde des insights:", error);
+      alert("❌ Erreur lors de la sauvegarde");
+    }
+  };
+
+  const handleAddCollaboration = async () => {
+    if (!creator) return;
+    if (!collabFormData.marque || !collabFormData.mois || !collabFormData.budget) {
+      alert("Veuillez remplir au moins la marque, le mois et le budget");
+      return;
+    }
+
+    try {
+      const newCollab = await createCollaboration({
+        talentId: creator.id,
+        ...collabFormData,
+      });
+
+      setCollaborations([...collaborations, newCollab]);
+      setIsAddingCollab(false);
+      setCollabFormData({
+        marque: "",
+        mois: "",
+        contenu: "",
+        datePreview: "",
+        datePublication: "",
+        budget: "",
+        type: "entrant",
+        gestionnaire: "",
+        facture: "",
+        statut: "en_cours",
+      });
+    } catch (error) {
+      console.error("Erreur lors de l'ajout de la collaboration:", error);
+      alert("❌ Erreur lors de l'ajout");
+    }
+  };
+
+  const handleEditCollaboration = (collab: Collaboration) => {
+    setSelectedCollab(collab);
+    setCollabFormData({
+      marque: collab.marque,
+      mois: collab.mois,
+      contenu: collab.contenu || "",
+      datePreview: collab.datePreview || "",
+      datePublication: collab.datePublication || "",
+      budget: collab.budget,
+      type: collab.type,
+      gestionnaire: collab.gestionnaire || "",
+      facture: collab.facture || "",
+      statut: collab.statut,
+    });
+    setIsEditingCollab(true);
+  };
+
+  const handleUpdateCollaboration = async () => {
+    if (!creator || !selectedCollab) return;
+    if (!collabFormData.marque || !collabFormData.mois || !collabFormData.budget) {
+      alert("Veuillez remplir au moins la marque, le mois et le budget");
+      return;
+    }
+
+    try {
+      const updatedCollab = await updateCollaborationAPI(selectedCollab.id, {
+        ...collabFormData,
+      });
+
+      setCollaborations(collaborations.map(c => c.id === updatedCollab.id ? updatedCollab : c));
+      setIsEditingCollab(false);
+      setSelectedCollab(null);
+      setCollabFormData({
+        marque: "",
+        mois: "",
+        contenu: "",
+        datePreview: "",
+        datePublication: "",
+        budget: "",
+        type: "entrant",
+        gestionnaire: "",
+        facture: "",
+        statut: "en_cours",
+      });
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de la collaboration:", error);
       alert("❌ Erreur lors de la mise à jour");
     }
   };
 
-  const handleCancel = () => {
+  const handleDeleteCollaboration = async (collabId: string) => {
     if (!creator) return;
     
-    setIsEditing(false);
-    // Réinitialiser les données
-    setEditedData({
-      firstName: creator.firstName,
-      lastName: creator.lastName,
-      birthDate: creator.birthDate,
-      height: creator.height,
-      weight: creator.weight,
-      shoeSize: creator.shoeSize,
-      address: creator.address,
-      phone: creator.phone,
-      email: creator.email,
-      location: creator.location || "",
-      bio: creator.bio || "",
-      instagram: creator.instagram || "",
-      tiktok: creator.tiktok || "",
-      snapchat: creator.snapchat || "",
-    });
+    console.log("🗑️ Suppression de la collaboration:", collabId);
+    
+    try {
+      await deleteCollaborationAPI(collabId);
+      setCollaborations(collaborations.filter(c => c.id !== collabId));
+      console.log("✅ Collaboration supprimée avec succès");
+      alert("✅ Collaboration supprimée");
+    } catch (error) {
+      console.error("❌ Erreur lors de la suppression:", error);
+      alert("❌ Erreur lors de la suppression");
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#fafaf9] p-8 flex items-center justify-center">
+        <div className="text-center space-y-6">
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="absolute inset-0 border-4 border-black/10 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-black border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <div>
+            <p className="text-xl font-light text-black mb-2">Chargement du profil</p>
+            <p className="text-sm text-black/40 font-light">Veuillez patienter...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!creator) {
+    return (
+      <div className="min-h-screen bg-[#fafaf9] p-8 flex items-center justify-center">
+        <div className="text-center space-y-6">
+          <div className="w-24 h-24 mx-auto bg-black/5 rounded-full flex items-center justify-center">
+            <span className="text-4xl">😕</span>
+          </div>
+          <div>
+            <h1 className="text-3xl font-light text-black mb-2">Profil non trouvé</h1>
+            <p className="text-sm text-black/40 font-light mb-6">
+              Ce talent n'existe pas ou a été supprimé
+            </p>
+            <Link href="/dashboard">
+              <Button className="btn-accent rounded-full font-light px-8">
+                ← Retour au dashboard
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Utiliser les données des insights au lieu des données statiques
+  const displayFollowers = insightsData.instagramFollowers || creator.instagramData?.followers || "0";
+  const displayEngagement = insightsData.instagramEngagement || creator.instagramData?.engagement || "0%";
+  const displayAvgLikes = insightsData.instagramAvgLikes || creator.instagramData?.avgLikes || "0";
+  const displayGrowth = insightsData.instagramGrowth || "+0";
 
   return (
     <div className="min-h-screen bg-[#fafaf9]">
-      {/* Header avec Hello */}
-      <div className="border-b border-black/5 bg-white">
-        <div className="max-w-[1400px] mx-auto px-8 py-8 flex items-center justify-between">
+      {/* Header */}
+      <div className="border-b border-black/5 bg-white px-8 py-6">
+        <Link href="/dashboard" className="text-sm text-black/60 hover:text-black font-light mb-4 inline-block">
+          ← Retour à la liste
+        </Link>
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-light tracking-tight text-black">
-              Hello, {isEditing ? editedData.firstName : creator.firstName} {isEditing ? editedData.lastName : creator.lastName} 👋
+            <h1 className="text-4xl font-light text-black">
+              Hello {creator.firstName} 👋
             </h1>
-            <p className="text-sm text-black/40 font-light mt-2">
-              {creator.category}
-            </p>
+            <p className="text-sm text-black/40 font-light mt-1">{creator.category}</p>
           </div>
-          
-          {activeTab === "overview" && !isEditing && (
+          {activeTab === "overview" && !isEditMode && (
             <Button
-              onClick={() => setIsEditing(true)}
+              onClick={() => setIsEditMode(true)}
               variant="outline"
+              size="sm"
               className="border-black/10 hover:bg-black/5 rounded-full font-light"
             >
               <Edit className="w-4 h-4 mr-2" />
               Modifier
             </Button>
           )}
-
-          {isEditing && (
-            <div className="flex gap-3">
-              <Button
-                onClick={handleSave}
-                className="bg-black hover:bg-black/80 text-white rounded-full font-light"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Sauvegarder
-              </Button>
-              <Button
-                onClick={handleCancel}
-                variant="outline"
-                className="border-black/10 hover:bg-black/5 rounded-full font-light"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Annuler
-              </Button>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Contenu principal */}
-      <div className="max-w-[1400px] mx-auto p-8">
+      {/* Content */}
+      <div className="max-w-[1600px] mx-auto p-8">
         {activeTab === "overview" && (
-          <div className="space-y-8">
-            {/* Profil card */}
-            <div className="bg-white border border-black/5 rounded-3xl p-10">
-              <div className="grid lg:grid-cols-[200px_1fr] gap-10">
-                <AvatarUpload
-                  currentImage={creatorImage}
-                  creatorName={`${creator.firstName} ${creator.lastName}`}
-                  onImageChange={setCreatorImage}
-                  className="aspect-square w-full"
-                />
+          <div>
+            {/* Stats globales tous réseaux */}
+            <div className="grid grid-cols-4 gap-6 mb-6">
+              <Card className="bg-white border border-black/5 rounded-3xl p-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <Users className="w-5 h-5 text-black/40" />
+                  <p className="text-sm text-black/40 font-light">Followers Instagram</p>
+                </div>
+                <p className="text-3xl font-light text-black">{displayFollowers}</p>
+                <p className="text-xs text-green-600 font-light mt-1">{displayGrowth} ce mois</p>
+              </Card>
 
-                <div className="space-y-6">
-                  {isEditing ? (
-                    <>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-black/80 font-light">Prénom</Label>
-                          <Input
-                            value={editedData.firstName}
-                            onChange={(e) => setEditedData({...editedData, firstName: e.target.value})}
-                            className="mt-2 h-10 rounded-xl border-black/10 bg-black/5"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-black/80 font-light">Nom</Label>
-                          <Input
-                            value={editedData.lastName}
-                            onChange={(e) => setEditedData({...editedData, lastName: e.target.value})}
-                            className="mt-2 h-10 rounded-xl border-black/10 bg-black/5"
-                          />
+              <Card className="bg-white border border-black/5 rounded-3xl p-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <Heart className="w-5 h-5 text-black/40" />
+                  <p className="text-sm text-black/40 font-light">Engagement</p>
+                </div>
+                <p className="text-3xl font-light text-black">{displayEngagement}</p>
+                <p className="text-xs text-green-600 font-light mt-1">Excellent</p>
+              </Card>
+
+              <Card className="bg-white border border-black/5 rounded-3xl p-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <Eye className="w-5 h-5 text-black/40" />
+                  <p className="text-sm text-black/40 font-light">Vues TikTok</p>
+                </div>
+                <p className="text-3xl font-light text-black">{insightsData.tiktokViews || "-"}</p>
+                <p className="text-xs text-black/40 font-light mt-1">Vues moyennes</p>
+              </Card>
+
+              <Card className="bg-white border border-black/5 rounded-3xl p-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <DollarSign className="w-5 h-5 text-black/40" />
+                  <p className="text-sm text-black/40 font-light">CA Total</p>
+                </div>
+                <p className="text-3xl font-light text-black">
+                  {collaborations.reduce((sum, collab) => sum + parseFloat(collab.budget || "0"), 0).toLocaleString('fr-FR')}€
+                </p>
+                <p className="text-xs text-black/40 font-light mt-1">{collaborations.length} collaboration{collaborations.length > 1 ? 's' : ''}</p>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-12 gap-6">
+              {/* Photo + Infos rapides */}
+              <div className="col-span-12 lg:col-span-4">
+                <Card className="bg-white border border-black/5 rounded-3xl p-8">
+                  <AvatarUpload
+                    currentImage={creatorImage}
+                    creatorName={`${creator.firstName} ${creator.lastName}`}
+                    onImageChange={setCreatorImage}
+                    className="aspect-square w-full mb-6"
+                  />
+                  <h2 className="text-2xl font-light text-black mb-1">
+                    {creator.firstName} {creator.lastName}
+                  </h2>
+                  <p className="text-sm text-black/40 font-light mb-6">
+                    {creator.instagramData?.handle || creator.category}
+                  </p>
+                  
+                  {(displayFollowers || displayEngagement || displayAvgLikes) && (
+                    <div className="grid grid-cols-3 gap-3 mb-6">
+                      <div className="text-center p-3 bg-black/5 rounded-xl">
+                        <p className="text-xl font-light text-black">{displayFollowers}</p>
+                        <p className="text-xs text-black/40 font-light">Followers</p>
+                      </div>
+                      <div className="text-center p-3 bg-black/5 rounded-xl">
+                        <p className="text-xl font-light text-black">{displayEngagement}</p>
+                        <p className="text-xs text-black/40 font-light">Engagement</p>
+                      </div>
+                      <div className="text-center p-3 bg-black/5 rounded-xl">
+                        <p className="text-xl font-light text-black">{displayAvgLikes}</p>
+                        <p className="text-xs text-black/40 font-light">Avg Likes</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {creator.instagram && (
+                    <a href={creator.instagram} target="_blank" rel="noopener noreferrer">
+                      <Button className="w-full btn-accent rounded-full font-light">
+                        <Instagram className="w-4 h-4 mr-2" />
+                        Voir Instagram
+                      </Button>
+                    </a>
+                  )}
+                </Card>
+              </div>
+
+              {/* Planning et Finance */}
+              <div className="col-span-12 lg:col-span-8 space-y-6">
+                {/* Planning Mini */}
+                <Card className="bg-white border border-black/5 rounded-3xl p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-2xl font-light text-black">Événements à venir</h3>
+                    <Button
+                      onClick={() => router.push(`/dashboard/creators/${creator.id}?tab=planning`)}
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl font-light border-black/10"
+                    >
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Voir le planning complet
+                    </Button>
+                  </div>
+                  <TalentCalendar talentId={creator.id} compact />
+                </Card>
+
+                {/* Finance */}
+                <Card className="bg-white border border-black/5 rounded-3xl p-8">
+                  <h3 className="text-2xl font-light text-black mb-6">Finance</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-black/40 font-light mb-1">CA cumulé</p>
+                      <p className="text-3xl font-light text-black">
+                        {collaborations.reduce((sum, collab) => sum + parseFloat(collab.budget || "0"), 0).toLocaleString('fr-FR')}€
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-black/5 rounded-xl">
+                      <span className="text-sm font-light text-black">Factures en attente</span>
+                      <span className="text-lg font-medium text-black">
+                        {collaborations.filter(c => c.facture && c.facture.trim() !== "").length}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-black/5 rounded-xl">
+                      <span className="text-sm font-light text-black">Collaborations</span>
+                      <span className="text-lg font-medium text-black">{collaborations.length}</span>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+
+            {/* Campaigns Manager - Tableau en bas */}
+            <Card className="bg-white border border-black/5 rounded-3xl p-8 mt-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-2xl font-light text-black">Collaborations</h3>
+                  <p className="text-sm text-black/40 font-light">Suivi des campagnes et partenariats</p>
+                </div>
+                <Button
+                  onClick={() => router.push(`/dashboard/creators/${creator.id}?tab=collaborations`)}
+                  className="btn-accent rounded-full font-light"
+                >
+                  <Target className="w-4 h-4 mr-2" />
+                  Voir tout
+                </Button>
+              </div>
+
+              {/* Tableau des collaborations */}
+              <div className="space-y-3">
+                {collaborations.length > 0 ? (
+                  <>
+                    <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs text-black/40 font-light uppercase">
+                      <div className="col-span-3">Marque</div>
+                      <div className="col-span-2">Mois</div>
+                      <div className="col-span-2">Contenu</div>
+                      <div className="col-span-2">Budget</div>
+                      <div className="col-span-2">Type</div>
+                      <div className="col-span-1">Statut</div>
+                    </div>
+
+                    {collaborations.slice(0, 5).map((collab) => (
+                      <div
+                        key={collab.id}
+                        className="bg-black/5 rounded-2xl p-4 hover:bg-black/10 transition-colors cursor-pointer"
+                        onClick={() => router.push(`/dashboard/creators/${creator.id}?tab=collaborations`)}
+                      >
+                        <div className="grid grid-cols-12 gap-4 items-center">
+                          <div className="col-span-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-black to-black/80 flex items-center justify-center flex-shrink-0">
+                                <span className="text-xs font-medium text-white">
+                                  {collab.marque.substring(0, 2).toUpperCase()}
+                                </span>
+                              </div>
+                              <p className="font-light text-black">{collab.marque}</p>
+                            </div>
+                          </div>
+                          <div className="col-span-2 text-sm text-black/60">{collab.mois}</div>
+                          <div className="col-span-2 text-sm text-black/60 truncate">{collab.contenu || "-"}</div>
+                          <div className="col-span-2 text-sm font-medium text-black">{parseFloat(collab.budget).toLocaleString('fr-FR')}€</div>
+                          <div className="col-span-2">
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                collab.type === "entrant"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-orange-100 text-orange-700"
+                              }`}
+                            >
+                              {collab.type === "entrant" ? "Entrant" : "Sortant"}
+                            </span>
+                          </div>
+                          <div className="col-span-1">
+                            <span
+                              className={`text-xs px-2 py-1 rounded-full ${
+                                collab.statut === "en_cours"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : collab.statut === "termine"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-red-100 text-red-700"
+                              }`}
+                            >
+                              {collab.statut === "en_cours"
+                                ? "En cours"
+                                : collab.statut === "termine"
+                                ? "Terminé"
+                                : "Annulé"}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                    ))}
+                    {collaborations.length > 5 && (
+                      <div className="text-center pt-4">
+                        <Button
+                          onClick={() => router.push(`/dashboard/creators/${creator.id}?tab=collaborations`)}
+                          variant="outline"
+                          className="rounded-full font-light border-black/10"
+                        >
+                          Voir les {collaborations.length - 5} autres collaborations
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-black/5 rounded-2xl p-8 text-center">
+                    <p className="text-black/40 font-light mb-4">Aucune collaboration pour le moment</p>
+                    <Button
+                      onClick={() => router.push(`/dashboard/creators/${creator.id}?tab=collaborations`)}
+                      className="btn-accent rounded-full font-light"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Créer une collaboration
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </Card>
+          </div>
+        )}
 
+        {/* Onglet Planning */}
+        {activeTab === "planning" && (
+          <div>
+            <div className="mb-8">
+              <h2 className="text-3xl font-light text-black mb-2">Planning</h2>
+              <p className="text-sm text-black/40 font-light">
+                Gérez les rendez-vous et collaborations de {creator.firstName}
+              </p>
+            </div>
+            <TalentCalendar talentId={creator.id} />
+          </div>
+        )}
+
+        {/* Onglet Collaborations */}
+        {activeTab === "collaborations" && (
+          <div>
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-3xl font-light text-black mb-2">Collaborations</h2>
+                <p className="text-sm text-black/40 font-light">
+                  Gérez les partenariats et campagnes de {creator.firstName}
+                </p>
+              </div>
+              <Button
+                onClick={() => {
+                  // Réinitialiser le formulaire
+                  setCollabFormData({
+                    marque: "",
+                    mois: "",
+                    contenu: "",
+                    datePreview: "",
+                    datePublication: "",
+                    budget: "",
+                    type: "entrant",
+                    gestionnaire: "",
+                    facture: "",
+                    statut: "en_cours",
+                  });
+                  setIsEditingCollab(false);
+                  setSelectedCollab(null);
+                  setIsAddingCollab(true);
+                }}
+                className="btn-accent rounded-xl font-light"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Nouvelle collaboration
+              </Button>
+            </div>
+
+            {/* Tableau des collaborations */}
+            <Card className="bg-white border border-black/5 rounded-3xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <table className="w-full">
+                    <thead className="bg-black/5">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-black/60 uppercase tracking-wider">Marque</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-black/60 uppercase tracking-wider">Mois</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-black/60 uppercase tracking-wider">Contenu</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-black/60 uppercase tracking-wider">Preview</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-black/60 uppercase tracking-wider">Publication</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-black/60 uppercase tracking-wider">Budget</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-black/60 uppercase tracking-wider">Type</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-black/60 uppercase tracking-wider">De qui</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-black/60 uppercase tracking-wider">Statut</th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-black/60 uppercase tracking-wider">Facture</th>
+                        <th className="px-6 py-4 text-right text-xs font-medium text-black/60 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <SortableContext
+                      items={collaborations.map((c) => c.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <tbody className="divide-y divide-black/5">
+                        {collaborations.length > 0 ? (
+                          collaborations.map((collab) => (
+                            <SortableRow
+                              key={collab.id}
+                              collab={collab}
+                              onEdit={handleEditCollaboration}
+                            />
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={11} className="px-6 py-12 text-center text-sm text-black/40">
+                              Aucune collaboration. Cliquez sur "Nouvelle collaboration" pour en ajouter une.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </SortableContext>
+                  </table>
+                </DndContext>
+              </div>
+            </Card>
+
+            {/* Modal Ajout Collaboration */}
+            {isAddingCollab && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-8">
+                <Card className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-2xl font-light text-black">Nouvelle collaboration</h3>
+                    <Button
+                      onClick={() => {
+                        setIsAddingCollab(false);
+                        setCollabFormData({
+                          marque: "",
+                          mois: "",
+                          contenu: "",
+                          datePreview: "",
+                          datePublication: "",
+                          budget: "",
+                          type: "entrant",
+                          gestionnaire: "",
+                          facture: "",
+                          statut: "en_cours",
+                        });
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-full"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <div className="space-y-5">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-black/80 font-light">Date de naissance</Label>
+                        <Label className="text-black/80 font-light">Marque <span className="text-red-500">*</span></Label>
+                        <Input
+                          value={collabFormData.marque}
+                          onChange={(e) => setCollabFormData({...collabFormData, marque: e.target.value})}
+                          placeholder="Ex: Nike, Adidas, L'Oréal..."
+                          className="mt-2 h-12 rounded-xl border-black/10 bg-black/5 text-base font-light"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-black/80 font-light">Mois <span className="text-red-500">*</span></Label>
+                        <select
+                          value={collabFormData.mois}
+                          onChange={(e) => setCollabFormData({...collabFormData, mois: e.target.value})}
+                          className="mt-2 h-12 w-full rounded-xl border border-black/10 bg-black/5 px-4 text-black font-light"
+                        >
+                          <option value="">Sélectionner...</option>
+                          <option value="Janvier">Janvier</option>
+                          <option value="Février">Février</option>
+                          <option value="Mars">Mars</option>
+                          <option value="Avril">Avril</option>
+                          <option value="Mai">Mai</option>
+                          <option value="Juin">Juin</option>
+                          <option value="Juillet">Juillet</option>
+                          <option value="Août">Août</option>
+                          <option value="Septembre">Septembre</option>
+                          <option value="Octobre">Octobre</option>
+                          <option value="Novembre">Novembre</option>
+                          <option value="Décembre">Décembre</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-black/80 font-light">Contenu</Label>
+                      <Input
+                        value={collabFormData.contenu}
+                        onChange={(e) => setCollabFormData({...collabFormData, contenu: e.target.value})}
+                        placeholder="1 TikTok + 1 IG Story..."
+                        className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-black/80 font-light">Date de preview</Label>
                         <Input
                           type="date"
-                          value={editedData.birthDate}
-                          onChange={(e) => setEditedData({...editedData, birthDate: e.target.value})}
-                          className="mt-2 h-10 rounded-xl border-black/10 bg-black/5"
+                          value={collabFormData.datePreview}
+                          onChange={(e) => setCollabFormData({...collabFormData, datePreview: e.target.value})}
+                          className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
                         />
                       </div>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <Label className="text-black/80 font-light">Taille (cm)</Label>
-                          <Input
-                            value={editedData.height}
-                            onChange={(e) => setEditedData({...editedData, height: e.target.value})}
-                            className="mt-2 h-10 rounded-xl border-black/10 bg-black/5"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-black/80 font-light">Poids (kg)</Label>
-                          <Input
-                            value={editedData.weight}
-                            onChange={(e) => setEditedData({...editedData, weight: e.target.value})}
-                            className="mt-2 h-10 rounded-xl border-black/10 bg-black/5"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-black/80 font-light">Pointure</Label>
-                          <Input
-                            value={editedData.shoeSize}
-                            onChange={(e) => setEditedData({...editedData, shoeSize: e.target.value})}
-                            className="mt-2 h-10 rounded-xl border-black/10 bg-black/5"
-                          />
-                        </div>
-                      </div>
-
                       <div>
-                        <Label className="text-black/80 font-light">Adresse</Label>
+                        <Label className="text-black/80 font-light">Date de publication</Label>
                         <Input
-                          value={editedData.address}
-                          onChange={(e) => setEditedData({...editedData, address: e.target.value})}
-                          className="mt-2 h-10 rounded-xl border-black/10 bg-black/5"
+                          type="date"
+                          value={collabFormData.datePublication}
+                          onChange={(e) => setCollabFormData({...collabFormData, datePublication: e.target.value})}
+                          className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
                         />
                       </div>
+                    </div>
 
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-black/80 font-light">Téléphone</Label>
+                        <Label className="text-black/80 font-light">Budget (€) <span className="text-red-500">*</span></Label>
                         <Input
-                          value={editedData.phone}
-                          onChange={(e) => setEditedData({...editedData, phone: e.target.value})}
-                          className="mt-2 h-10 rounded-xl border-black/10 bg-black/5"
+                          type="number"
+                          value={collabFormData.budget}
+                          onChange={(e) => setCollabFormData({...collabFormData, budget: e.target.value})}
+                          placeholder="1000"
+                          className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
                         />
                       </div>
-
                       <div>
-                        <Label className="text-black/80 font-light">Email</Label>
-                        <Input
-                          value={editedData.email}
-                          onChange={(e) => setEditedData({...editedData, email: e.target.value})}
-                          className="mt-2 h-10 rounded-xl border-black/10 bg-black/5"
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div>
-                        <h2 className="text-3xl font-light text-black tracking-tight mb-2">
-                          {creator.firstName} {creator.lastName}
-                        </h2>
-                        <p className="text-base text-black/40 font-light">
-                          {creator.instagramData?.handle || creator.category}
-                        </p>
-                      </div>
-
-                      <p className="text-base text-black/60 font-light leading-relaxed">
-                        {creator.bio}
-                      </p>
-
-                      {/* Infos personnelles */}
-                      <div className="space-y-3 pt-2">
-                        <div className="flex items-center gap-3 text-sm text-black/60 font-light">
-                          <Calendar className="w-4 h-4" />
-                          {new Date(creator.birthDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                        </div>
-                        <div className="flex items-center gap-6 text-sm text-black/60 font-light">
-                          <div className="flex items-center gap-2">
-                            <Ruler className="w-4 h-4" />
-                            {creator.height} cm
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Weight className="w-4 h-4" />
-                            {creator.weight} kg
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Footprints className="w-4 h-4" />
-                            {creator.shoeSize}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-black/60 font-light">
-                          <MapPin className="w-4 h-4" />
-                          {creator.address}
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-black/60 font-light">
-                          <Phone className="w-4 h-4" />
-                          {creator.phone}
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-black/60 font-light">
-                          <Mail className="w-4 h-4" />
-                          {creator.email}
-                        </div>
-                      </div>
-
-                      {creator.instagram && (
-                        <a 
-                          href={creator.instagram} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
+                        <Label className="text-black/80 font-light">Type</Label>
+                        <select
+                          value={collabFormData.type}
+                          onChange={(e) => setCollabFormData({...collabFormData, type: e.target.value as "entrant" | "sortant"})}
+                          className="mt-2 h-12 w-full rounded-xl border border-black/10 bg-black/5 px-4 text-black font-light"
                         >
-                          <Button className="bg-black hover:bg-black/80 text-white rounded-full font-light">
-                            <Instagram className="w-4 h-4 mr-2" />
-                            Voir Instagram
-                          </Button>
-                        </a>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
+                          <option value="entrant">Entrant</option>
+                          <option value="sortant">Sortant</option>
+                        </select>
+                      </div>
+                    </div>
 
-            {/* Stats grid */}
-            {creator.instagramData && (
-              <div className="grid grid-cols-4 gap-6">
-                <div className="bg-white border border-black/5 rounded-2xl p-6">
-                  <div className="text-3xl font-light text-black tracking-tight mb-2">
-                    {creator.instagramData.followers}
-                  </div>
-                  <div className="text-xs text-black/40 font-light tracking-wide uppercase">
-                    Followers
-                  </div>
-                </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-black/80 font-light">De qui</Label>
+                        <Input
+                          value={collabFormData.gestionnaire}
+                          onChange={(e) => setCollabFormData({...collabFormData, gestionnaire: e.target.value})}
+                          placeholder="Saona, Andrea..."
+                          className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-black/80 font-light">N° Facture</Label>
+                        <Input
+                          value={collabFormData.facture}
+                          onChange={(e) => setCollabFormData({...collabFormData, facture: e.target.value})}
+                          placeholder="FACTURE 2025001"
+                          className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                        />
+                      </div>
+                    </div>
 
-                <div className="bg-white border border-black/5 rounded-2xl p-6">
-                  <div className="text-3xl font-light text-black tracking-tight mb-2">
-                    -
-                  </div>
-                  <div className="text-xs text-black/40 font-light tracking-wide uppercase">
-                    Posts
-                  </div>
-                </div>
+                    <div>
+                      <Label className="text-black/80 font-light">Statut</Label>
+                      <select
+                        value={collabFormData.statut}
+                        onChange={(e) => setCollabFormData({...collabFormData, statut: e.target.value as "en_cours" | "termine" | "annule"})}
+                        className="mt-2 h-12 w-full rounded-xl border border-black/10 bg-black/5 px-4 text-black font-light"
+                      >
+                        <option value="en_cours">En cours</option>
+                        <option value="termine">Terminé</option>
+                        <option value="annule">Annulé</option>
+                      </select>
+                    </div>
 
-                <div className="bg-white border border-black/5 rounded-2xl p-6">
-                  <div className="text-3xl font-light text-black tracking-tight mb-2">
-                    {creator.instagramData.engagement}
-                  </div>
-                  <div className="text-xs text-black/40 font-light tracking-wide uppercase">
-                    Engagement
-                  </div>
-                </div>
-
-                <div className="bg-white border border-black/5 rounded-2xl p-6">
-                  <div className="text-3xl font-light text-black tracking-tight mb-2">
-                    {creator.instagramData.avgLikes}
-                  </div>
-                  <div className="text-xs text-black/40 font-light tracking-wide uppercase">
-                    Likes moy.
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Campagnes récentes */}
-            {creatorsData.find(c => c.id === creator.id)?.recentCampaigns && (
-              <div className="bg-white border border-black/5 rounded-3xl p-10">
-                <h3 className="text-2xl font-light text-black tracking-tight mb-8">
-                  Campagnes récentes
-                </h3>
-                <div className="space-y-6">
-                  {creatorsData.find(c => c.id === creator.id)?.recentCampaigns?.map((campaign, index) => (
-                    <div 
-                      key={index}
-                      className="pb-6 border-b border-black/5 last:border-0 last:pb-0"
+                    <Button
+                      onClick={handleAddCollaboration}
+                      className="w-full btn-accent rounded-xl font-light h-12 mt-6"
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="text-lg font-light text-black">
-                          {campaign.brand}
-                        </div>
-                        <div className="text-xs text-black/40 font-light">
-                          {campaign.date}
-                        </div>
+                      Ajouter la collaboration
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            )}
+
+            {/* Modal Édition Collaboration */}
+            {isEditingCollab && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-8">
+                <Card className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-2xl font-light text-black">Modifier la collaboration</h3>
+                    <Button
+                      onClick={() => {
+                        setIsEditingCollab(false);
+                        setSelectedCollab(null);
+                        setCollabFormData({
+                          marque: "",
+                          mois: "",
+                          contenu: "",
+                          datePreview: "",
+                          datePublication: "",
+                          budget: "",
+                          type: "entrant",
+                          gestionnaire: "",
+                          facture: "",
+                          statut: "en_cours",
+                        });
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-full"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  <div className="space-y-5">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-black/80 font-light">Marque <span className="text-red-500">*</span></Label>
+                        <Input
+                          value={collabFormData.marque}
+                          onChange={(e) => setCollabFormData({...collabFormData, marque: e.target.value})}
+                          placeholder="Ex: Nike, Adidas, L'Oréal..."
+                          className="mt-2 h-12 rounded-xl border-black/10 bg-black/5 text-base font-light"
+                        />
                       </div>
-                      <div className="text-sm text-black/60 font-light">
-                        {campaign.performance}
+                      <div>
+                        <Label className="text-black/80 font-light">Mois <span className="text-red-500">*</span></Label>
+                        <select
+                          value={collabFormData.mois}
+                          onChange={(e) => setCollabFormData({...collabFormData, mois: e.target.value})}
+                          className="mt-2 h-12 w-full rounded-xl border border-black/10 bg-black/5 px-4 text-black font-light"
+                        >
+                          <option value="">Sélectionner...</option>
+                          <option value="Janvier">Janvier</option>
+                          <option value="Février">Février</option>
+                          <option value="Mars">Mars</option>
+                          <option value="Avril">Avril</option>
+                          <option value="Mai">Mai</option>
+                          <option value="Juin">Juin</option>
+                          <option value="Juillet">Juillet</option>
+                          <option value="Août">Août</option>
+                          <option value="Septembre">Septembre</option>
+                          <option value="Octobre">Octobre</option>
+                          <option value="Novembre">Novembre</option>
+                          <option value="Décembre">Décembre</option>
+                        </select>
                       </div>
                     </div>
-                  ))}
-                </div>
+
+                    <div>
+                      <Label className="text-black/80 font-light">Contenu</Label>
+                      <Input
+                        value={collabFormData.contenu}
+                        onChange={(e) => setCollabFormData({...collabFormData, contenu: e.target.value})}
+                        placeholder="1 TikTok + 1 IG Story..."
+                        className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-black/80 font-light">Date de preview</Label>
+                        <Input
+                          type="date"
+                          value={collabFormData.datePreview}
+                          onChange={(e) => setCollabFormData({...collabFormData, datePreview: e.target.value})}
+                          className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-black/80 font-light">Date de publication</Label>
+                        <Input
+                          type="date"
+                          value={collabFormData.datePublication}
+                          onChange={(e) => setCollabFormData({...collabFormData, datePublication: e.target.value})}
+                          className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-black/80 font-light">Budget (€) <span className="text-red-500">*</span></Label>
+                        <Input
+                          type="number"
+                          value={collabFormData.budget}
+                          onChange={(e) => setCollabFormData({...collabFormData, budget: e.target.value})}
+                          placeholder="1000"
+                          className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-black/80 font-light">Type</Label>
+                        <select
+                          value={collabFormData.type}
+                          onChange={(e) => setCollabFormData({...collabFormData, type: e.target.value as "entrant" | "sortant"})}
+                          className="mt-2 h-12 w-full rounded-xl border border-black/10 bg-black/5 px-4 text-black font-light"
+                        >
+                          <option value="entrant">Entrant</option>
+                          <option value="sortant">Sortant</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-black/80 font-light">De qui</Label>
+                        <Input
+                          value={collabFormData.gestionnaire}
+                          onChange={(e) => setCollabFormData({...collabFormData, gestionnaire: e.target.value})}
+                          placeholder="Saona, Andrea..."
+                          className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-black/80 font-light">N° Facture</Label>
+                        <Input
+                          value={collabFormData.facture}
+                          onChange={(e) => setCollabFormData({...collabFormData, facture: e.target.value})}
+                          placeholder="FACTURE 2025001"
+                          className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-black/80 font-light">Statut</Label>
+                      <select
+                        value={collabFormData.statut}
+                        onChange={(e) => setCollabFormData({...collabFormData, statut: e.target.value as "en_cours" | "termine" | "annule"})}
+                        className="mt-2 h-12 w-full rounded-xl border border-black/10 bg-black/5 px-4 text-black font-light"
+                      >
+                        <option value="en_cours">En cours</option>
+                        <option value="termine">Terminé</option>
+                        <option value="annule">Annulé</option>
+                      </select>
+                    </div>
+
+                    <div className="flex gap-4 mt-6">
+                      <Button
+                        onClick={handleUpdateCollaboration}
+                        className="flex-1 btn-accent rounded-xl font-light h-12"
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        Modifier la collaboration
+                      </Button>
+                      <Button
+                        onClick={async () => {
+                          if (!selectedCollab) return;
+                          
+                          console.log("🗑️ Suppression de la collaboration:", selectedCollab.id);
+                          
+                          try {
+                            await deleteCollaborationAPI(selectedCollab.id);
+                            setCollaborations(collaborations.filter(c => c.id !== selectedCollab.id));
+                            setIsEditingCollab(false);
+                            setSelectedCollab(null);
+                            setCollabFormData({
+                              marque: "",
+                              mois: "",
+                              contenu: "",
+                              datePreview: "",
+                              datePublication: "",
+                              budget: "",
+                              type: "entrant",
+                              gestionnaire: "",
+                              facture: "",
+                              statut: "en_cours",
+                            });
+                            console.log("✅ Collaboration supprimée avec succès");
+                            alert("✅ Collaboration supprimée");
+                          } catch (error) {
+                            console.error("❌ Erreur lors de la suppression:", error);
+                            alert("❌ Erreur lors de la suppression");
+                          }
+                        }}
+                        variant="outline"
+                        className="border-red-200 hover:bg-red-50 text-red-600 rounded-xl font-light h-12 px-6"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Supprimer
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
               </div>
             )}
           </div>
         )}
 
-        {activeTab === "links" && (
-          <div className="bg-white border border-black/5 rounded-3xl p-10">
-            <h3 className="text-2xl font-light text-black tracking-tight mb-8">
-              Liens du talent
-            </h3>
-            <div className="space-y-4">
-              {creator.instagram && (
-                <a
-                  href={creator.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between p-4 bg-black/5 rounded-xl hover:bg-black/10 transition-colors"
+        {activeTab === "insights" && (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-light text-black mb-2">Insights détaillés</h2>
+                <p className="text-sm text-black/40 font-light">Statistiques des réseaux sociaux (édition manuelle)</p>
+              </div>
+              {!isEditingInsights ? (
+                <Button
+                  onClick={() => setIsEditingInsights(true)}
+                  variant="outline"
+                  className="border-black/10 hover:bg-black/5 rounded-full font-light"
                 >
-                  <div className="flex items-center gap-3">
-                    <Instagram className="w-4 h-4 text-black/60" />
-                    <span className="font-light text-black">Instagram</span>
-                  </div>
-                  <span className="text-xs text-black/40 font-light uppercase">social</span>
-                </a>
-              )}
-              {creator.tiktok && (
-                <a
-                  href={creator.tiktok}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between p-4 bg-black/5 rounded-xl hover:bg-black/10 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <LinkIcon className="w-4 h-4 text-black/60" />
-                    <span className="font-light text-black">TikTok</span>
-                  </div>
-                  <span className="text-xs text-black/40 font-light uppercase">social</span>
-                </a>
-              )}
-              {creator.snapchat && (
-                <a
-                  href={creator.snapchat}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between p-4 bg-black/5 rounded-xl hover:bg-black/10 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <LinkIcon className="w-4 h-4 text-black/60" />
-                    <span className="font-light text-black">Snapchat</span>
-                  </div>
-                  <span className="text-xs text-black/40 font-light uppercase">social</span>
-                </a>
-              )}
-              {creator.email && (
-                <a
-                  href={`mailto:${creator.email}`}
-                  className="flex items-center justify-between p-4 bg-black/5 rounded-xl hover:bg-black/10 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Mail className="w-4 h-4 text-black/60" />
-                    <span className="font-light text-black">Email Pro</span>
-                  </div>
-                  <span className="text-xs text-black/40 font-light uppercase">contact</span>
-                </a>
-              )}
-              {!creator.instagram && !creator.tiktok && !creator.snapchat && !creator.email && (
-                <p className="text-black/40 font-light text-center py-8">Aucun lien disponible</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "stats" && (
-          <div className="space-y-8">
-            <div className="bg-white border border-black/5 rounded-3xl p-10">
-              <h3 className="text-2xl font-light text-black tracking-tight mb-8">
-                Statistiques détaillées
-              </h3>
-              
-              {creator.instagramData ? (
-                <>
-                  <div className="grid grid-cols-3 gap-6 mb-8">
-                    <div className="p-6 bg-black/5 rounded-2xl">
-                      <div className="text-2xl font-light text-black tracking-tight mb-2">
-                        {creator.instagramData.followers}
-                      </div>
-                      <div className="text-xs text-black/40 font-light tracking-wide uppercase">
-                        Followers
-                      </div>
-                    </div>
-
-                    <div className="p-6 bg-black/5 rounded-2xl">
-                      <div className="text-2xl font-light text-black tracking-tight mb-2">
-                        {creator.instagramData.engagement}
-                      </div>
-                      <div className="text-xs text-black/40 font-light tracking-wide uppercase">
-                        Engagement
-                      </div>
-                    </div>
-
-                    <div className="p-6 bg-black/5 rounded-2xl">
-                      <div className="text-2xl font-light text-black tracking-tight mb-2">
-                        {creator.instagramData.avgLikes}
-                      </div>
-                      <div className="text-xs text-black/40 font-light tracking-wide uppercase">
-                        Likes moyens
-                      </div>
-                    </div>
-                  </div>
-
-                  <p className="text-black/40 font-light text-sm">
-                    Les statistiques détaillées seront disponibles prochainement.
-                  </p>
-                </>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Modifier les statistiques
+                </Button>
               ) : (
-                <div className="text-center py-12">
-                  <p className="text-black/40 font-light text-lg mb-2">
-                    Statistiques Instagram non disponibles
-                  </p>
-                  <p className="text-black/30 font-light text-sm">
-                    Connectez le compte Instagram pour voir les statistiques détaillées
-                  </p>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleSaveInsights}
+                    className="btn-accent rounded-full font-light"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    Sauvegarder
+                  </Button>
+                  <Button
+                    onClick={() => setIsEditingInsights(false)}
+                    variant="outline"
+                    className="border-black/10 hover:bg-black/5 rounded-full font-light"
+                  >
+                    Annuler
+                  </Button>
                 </div>
               )}
             </div>
+
+            {/* Instagram Insights */}
+            <Card className="bg-white border border-black/5 rounded-3xl p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <Instagram className="w-6 h-6 text-black" />
+                <h3 className="text-2xl font-light text-black">Instagram</h3>
+              </div>
+              
+              {isEditingInsights ? (
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <Label className="text-black/80 font-light">Followers</Label>
+                    <Input
+                      value={insightsData.instagramFollowers}
+                      onChange={(e) => setInsightsData({...insightsData, instagramFollowers: e.target.value})}
+                      placeholder="120K"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-black/80 font-light">Taux d'engagement</Label>
+                    <Input
+                      value={insightsData.instagramEngagement}
+                      onChange={(e) => setInsightsData({...insightsData, instagramEngagement: e.target.value})}
+                      placeholder="8.5%"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-black/80 font-light">Likes moyens</Label>
+                    <Input
+                      value={insightsData.instagramAvgLikes}
+                      onChange={(e) => setInsightsData({...insightsData, instagramAvgLikes: e.target.value})}
+                      placeholder="10K"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-black/80 font-light">Croissance mensuelle</Label>
+                    <Input
+                      value={insightsData.instagramGrowth}
+                      onChange={(e) => setInsightsData({...insightsData, instagramGrowth: e.target.value})}
+                      placeholder="+2.5K"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-4 gap-6">
+                  <div className="p-6 bg-black/5 rounded-2xl">
+                    <p className="text-sm text-black/40 font-light mb-2">Followers</p>
+                    <p className="text-3xl font-light text-black mb-1">{insightsData.instagramFollowers || "-"}</p>
+                  </div>
+                  <div className="p-6 bg-black/5 rounded-2xl">
+                    <p className="text-sm text-black/40 font-light mb-2">Engagement</p>
+                    <p className="text-3xl font-light text-black mb-1">{insightsData.instagramEngagement || "-"}</p>
+                  </div>
+                  <div className="p-6 bg-black/5 rounded-2xl">
+                    <p className="text-sm text-black/40 font-light mb-2">Likes moyens</p>
+                    <p className="text-3xl font-light text-black mb-1">{insightsData.instagramAvgLikes || "-"}</p>
+                  </div>
+                  <div className="p-6 bg-black/5 rounded-2xl">
+                    <p className="text-sm text-black/40 font-light mb-2">Croissance</p>
+                    <p className="text-3xl font-light text-black mb-1">{insightsData.instagramGrowth || "-"}</p>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* TikTok Insights */}
+            <Card className="bg-white border border-black/5 rounded-3xl p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-6 h-6 bg-black rounded-lg"></div>
+                <h3 className="text-2xl font-light text-black">TikTok</h3>
+              </div>
+              
+              {isEditingInsights ? (
+                <div className="grid grid-cols-3 gap-6">
+                  <div>
+                    <Label className="text-black/80 font-light">Followers</Label>
+                    <Input
+                      value={insightsData.tiktokFollowers}
+                      onChange={(e) => setInsightsData({...insightsData, tiktokFollowers: e.target.value})}
+                      placeholder="250K"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-black/80 font-light">Taux d'engagement</Label>
+                    <Input
+                      value={insightsData.tiktokEngagement}
+                      onChange={(e) => setInsightsData({...insightsData, tiktokEngagement: e.target.value})}
+                      placeholder="12%"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-black/80 font-light">Vues moyennes</Label>
+                    <Input
+                      value={insightsData.tiktokViews}
+                      onChange={(e) => setInsightsData({...insightsData, tiktokViews: e.target.value})}
+                      placeholder="500K"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="p-6 bg-black/5 rounded-2xl">
+                    <p className="text-sm text-black/40 font-light mb-2">Followers</p>
+                    <p className="text-3xl font-light text-black mb-1">{insightsData.tiktokFollowers || "-"}</p>
+                  </div>
+                  <div className="p-6 bg-black/5 rounded-2xl">
+                    <p className="text-sm text-black/40 font-light mb-2">Engagement</p>
+                    <p className="text-3xl font-light text-black mb-1">{insightsData.tiktokEngagement || "-"}</p>
+                  </div>
+                  <div className="p-6 bg-black/5 rounded-2xl">
+                    <p className="text-sm text-black/40 font-light mb-2">Vues moyennes</p>
+                    <p className="text-3xl font-light text-black mb-1">{insightsData.tiktokViews || "-"}</p>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* Snapchat Insights */}
+            <Card className="bg-white border border-black/5 rounded-3xl p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-6 h-6 bg-yellow-400 rounded-lg"></div>
+                <h3 className="text-2xl font-light text-black">Snapchat</h3>
+              </div>
+              
+              {isEditingInsights ? (
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <Label className="text-black/80 font-light">Abonnés</Label>
+                    <Input
+                      value={insightsData.snapchatFollowers}
+                      onChange={(e) => setInsightsData({...insightsData, snapchatFollowers: e.target.value})}
+                      placeholder="50K"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-black/80 font-light">Vues moyennes</Label>
+                    <Input
+                      value={insightsData.snapchatViews}
+                      onChange={(e) => setInsightsData({...insightsData, snapchatViews: e.target.value})}
+                      placeholder="30K"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="p-6 bg-black/5 rounded-2xl">
+                    <p className="text-sm text-black/40 font-light mb-2">Abonnés</p>
+                    <p className="text-3xl font-light text-black mb-1">{insightsData.snapchatFollowers || "-"}</p>
+                  </div>
+                  <div className="p-6 bg-black/5 rounded-2xl">
+                    <p className="text-sm text-black/40 font-light mb-2">Vues moyennes</p>
+                    <p className="text-3xl font-light text-black mb-1">{insightsData.snapchatViews || "-"}</p>
+                  </div>
+                </div>
+              )}
+            </Card>
           </div>
         )}
 
-        {activeTab === "media" && (
-          <div className="bg-white border border-black/5 rounded-3xl p-10">
-            <h3 className="text-2xl font-light text-black tracking-tight mb-4">
-              Kit Média
-            </h3>
-            <p className="text-sm text-black/40 font-light mb-8">
-              Photos, logos, et ressources médias du talent
-            </p>
-            <div className="flex items-center justify-center h-64 bg-black/5 rounded-2xl">
-              <div className="text-center">
-                <Image className="w-12 h-12 text-black/20 mx-auto mb-4" />
+        {activeTab === "mediakit" && (
+          <Card className="bg-white border border-black/5 rounded-3xl p-10">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-3xl font-light text-black mb-2">Kit Média</h2>
                 <p className="text-sm text-black/40 font-light">
-                  Bientôt disponible
+                  Document PDF à destination des marques pour les négociations
                 </p>
               </div>
             </div>
-          </div>
+
+            {mediakitUrl ? (
+              <div className="space-y-6">
+                {/* Preview du PDF */}
+                <div className="border-2 border-black/10 rounded-2xl overflow-hidden bg-white">
+                  <div className="bg-black/5 p-4 border-b border-black/10">
+                    <p className="text-sm text-black/60 font-light">
+                      📄 Prévisualisation du Kit Média
+                    </p>
+                  </div>
+                  <object
+                    data={mediakitUrl}
+                    type="application/pdf"
+                    className="w-full h-[600px]"
+                  >
+                    <embed
+                      src={mediakitUrl}
+                      type="application/pdf"
+                      className="w-full h-[600px]"
+                    />
+                  </object>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-4">
+                  <a
+                    href={mediakitUrl}
+                    download={`MediaKit_${creator?.firstName}_${creator?.lastName}.pdf`}
+                    className="flex-1"
+                  >
+                    <Button className="w-full btn-accent rounded-full font-light">
+                      <Upload className="w-4 h-4 mr-2" />
+                      Télécharger le Kit Média
+                    </Button>
+                  </a>
+                  <Button
+                    type="button"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      
+                      console.log("🗑️ Début de la suppression");
+                      console.log("creatorId:", creatorId);
+                      console.log("mediakitUrl:", mediakitUrl);
+                      
+                      try {
+                        console.log("📡 Appel de l'API deleteMediaKit...");
+                        const result = await deleteMediaKit(creatorId);
+                        console.log("✅ Résultat de la suppression:", result);
+                        
+                        setMediakitUrl(null);
+                        alert("✅ Kit Média supprimé avec succès !");
+                      } catch (error: any) {
+                        console.error("❌ Erreur lors de la suppression:", error);
+                        alert(`❌ Erreur: ${error.message}`);
+                      }
+                    }}
+                    variant="outline"
+                    className="border-red-200 hover:bg-red-50 text-red-600 rounded-full font-light"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Supprimer
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <div className="w-24 h-24 mx-auto mb-6 bg-black/5 rounded-full flex items-center justify-center">
+                  <FileText className="w-12 h-12 text-black/20" />
+                </div>
+                <h3 className="text-xl font-light text-black mb-2">
+                  Aucun Kit Média
+                </h3>
+                <p className="text-sm text-black/40 font-light mb-6">
+                  Uploadez un PDF pour créer le Kit Média du talent
+                </p>
+                <label className="cursor-pointer inline-block">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+
+                      if (file.type !== "application/pdf") {
+                        alert("Veuillez sélectionner un fichier PDF");
+                        return;
+                      }
+
+                      try {
+                        const reader = new FileReader();
+                        reader.onload = async (event) => {
+                          const pdfUrl = event.target?.result as string;
+                          await saveMediaKit({
+                            talentId: creatorId,
+                            pdfUrl,
+                          });
+                          setMediakitUrl(pdfUrl);
+                          alert("✅ Kit Média uploadé avec succès !");
+                        };
+                        reader.readAsDataURL(file);
+                      } catch (error) {
+                        console.error("Erreur lors de l'upload du media kit:", error);
+                        alert("❌ Erreur lors de l'upload");
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <div className="btn-accent rounded-full font-light inline-flex items-center px-6 py-3 cursor-pointer hover:opacity-90 transition-opacity">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Uploader le Kit Média (PDF)
+                  </div>
+                </label>
+              </div>
+            )}
+          </Card>
+        )}
+
+        {activeTab === "content" && (
+          <Card className="bg-white border border-black/5 rounded-3xl p-10">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-3xl font-light text-black mb-2">Content Library</h2>
+                <p className="text-sm text-black/40 font-light">Photos et contenus du talent</p>
+              </div>
+              <Button className="btn-accent rounded-full font-light">
+                <Upload className="w-4 h-4 mr-2" />
+                Upload
+              </Button>
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <div key={i} className="aspect-square bg-black/5 rounded-2xl hover:bg-black/10 transition-colors cursor-pointer"></div>
+              ))}
+            </div>
+          </Card>
         )}
 
         {activeTab === "documents" && (
-          <div className="bg-white border border-black/5 rounded-3xl p-10">
-            <h3 className="text-2xl font-light text-black tracking-tight mb-8">
-              Documents légaux
-            </h3>
-            {creatorsData.find(c => c.id === creator.id)?.documents ? (
-              <div className="space-y-4">
-                {creatorsData.find(c => c.id === creator.id)?.documents?.map((doc, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-4 bg-black/5 rounded-xl"
-                  >
-                    <div className="flex items-center gap-3">
-                      <FileText className="w-4 h-4 text-black/60" />
-                      <div>
-                        <p className="font-light text-black">{doc.name}</p>
-                        <p className="text-xs text-black/40 font-light">{doc.type}</p>
-                      </div>
-                    </div>
-                    <span className="text-xs text-black/40 font-light">{doc.uploadDate}</span>
+          <Card className="bg-white border border-black/5 rounded-3xl p-10">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-3xl font-light text-black mb-2">Documents</h2>
+                <p className="text-sm text-black/40 font-light">Documents officiels du talent</p>
+              </div>
+              <Button className="btn-accent rounded-full font-light">
+                <Upload className="w-4 h-4 mr-2" />
+                Ajouter
+              </Button>
+            </div>
+            <div className="space-y-3">
+              <div className="p-6 bg-black/5 rounded-2xl flex items-center justify-center">
+                <div className="text-center">
+                  <FileText className="w-12 h-12 text-black/20 mx-auto mb-3" />
+                  <p className="font-light text-black/40">Aucun document</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {activeTab === "info" && (
+          <div className="space-y-6">
+            {/* Header avec bouton Sauvegarder */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-light text-black mb-2">Informations personnelles</h2>
+                <p className="text-sm text-black/40 font-light">Modifier les informations du talent</p>
+              </div>
+              <Button onClick={handleSave} className="btn-accent rounded-full font-light">
+                <Save className="w-4 h-4 mr-2" />
+                Sauvegarder toutes les modifications
+              </Button>
+            </div>
+
+            {/* Informations générales */}
+            <Card className="bg-white border border-black/5 rounded-3xl p-8">
+              <h3 className="text-xl font-light text-black mb-6">Informations générales</h3>
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-black/80 font-light">Prénom</Label>
+                    <Input
+                      value={editedData.firstName}
+                      onChange={(e) => setEditedData({...editedData, firstName: e.target.value})}
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
                   </div>
-                ))}
+                  <div>
+                    <Label className="text-black/80 font-light">Nom</Label>
+                    <Input
+                      value={editedData.lastName}
+                      onChange={(e) => setEditedData({...editedData, lastName: e.target.value})}
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-black/80 font-light">Date de naissance</Label>
+                    <Input
+                      type="date"
+                      value={editedData.birthDate}
+                      onChange={(e) => setEditedData({...editedData, birthDate: e.target.value})}
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-black/80 font-light">Catégorie</Label>
+                    <select
+                      value={editedData.category}
+                      onChange={(e) => setEditedData({...editedData, category: e.target.value})}
+                      className="mt-2 h-12 w-full rounded-xl border border-black/10 bg-black/5 text-black font-light px-4"
+                    >
+                      <option value="">Sélectionner...</option>
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
-            ) : (
-              <div className="text-center py-12">
-                <FileText className="w-12 h-12 text-black/20 mx-auto mb-4" />
-                <p className="text-black/40 font-light text-lg mb-2">
-                  Aucun document disponible
-                </p>
-                <p className="text-black/30 font-light text-sm">
-                  Les documents seront ajoutés prochainement
-                </p>
+            </Card>
+
+            {/* Informations physiques */}
+            <Card className="bg-white border border-black/5 rounded-3xl p-8">
+              <h3 className="text-xl font-light text-black mb-6">Informations physiques</h3>
+              <div className="space-y-6">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-black/80 font-light">Taille du haut</Label>
+                    <Input
+                      value={editedData.topSize}
+                      onChange={(e) => setEditedData({...editedData, topSize: e.target.value})}
+                      placeholder="S, M, L, XL..."
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-black/80 font-light">Taille du bas</Label>
+                    <Input
+                      value={editedData.bottomSize}
+                      onChange={(e) => setEditedData({...editedData, bottomSize: e.target.value})}
+                      placeholder="36, 38, 40..."
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-black/80 font-light">Pointure</Label>
+                    <Input
+                      value={editedData.shoeSize}
+                      onChange={(e) => setEditedData({...editedData, shoeSize: e.target.value})}
+                      placeholder="38"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-black/80 font-light">Intolérances alimentaires</Label>
+                  <Input
+                    value={editedData.foodIntolerances}
+                    onChange={(e) => setEditedData({...editedData, foodIntolerances: e.target.value})}
+                    placeholder="Gluten, lactose, fruits à coque..."
+                    className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                  />
+                </div>
               </div>
-            )}
+            </Card>
+
+            {/* Coordonnées */}
+            <Card className="bg-white border border-black/5 rounded-3xl p-8">
+              <h3 className="text-xl font-light text-black mb-6">Coordonnées</h3>
+              <div className="space-y-6">
+                <div>
+                  <Label className="text-black/80 font-light">Adresse complète</Label>
+                  <Input
+                    value={editedData.address}
+                    onChange={(e) => setEditedData({...editedData, address: e.target.value})}
+                    placeholder="123 Rue de la Paix, 75001 Paris"
+                    className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-black/80 font-light">Téléphone</Label>
+                    <Input
+                      value={editedData.phone}
+                      onChange={(e) => setEditedData({...editedData, phone: e.target.value})}
+                      placeholder="+33 6 12 34 56 78"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-black/80 font-light">Email</Label>
+                    <Input
+                      value={editedData.email}
+                      onChange={(e) => setEditedData({...editedData, email: e.target.value})}
+                      placeholder="email@exemple.com"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Réseaux sociaux */}
+            <Card className="bg-white border border-black/5 rounded-3xl p-8">
+              <h3 className="text-xl font-light text-black mb-6">Réseaux sociaux</h3>
+              <div className="space-y-6">
+                <div>
+                  <Label className="text-black/80 font-light flex items-center gap-2">
+                    <Instagram className="w-4 h-4" />
+                    Instagram
+                  </Label>
+                  <Input
+                    value={editedData.instagram}
+                    onChange={(e) => setEditedData({...editedData, instagram: e.target.value})}
+                    placeholder="https://instagram.com/username"
+                    className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-black/80 font-light">TikTok</Label>
+                  <Input
+                    value={editedData.tiktok}
+                    onChange={(e) => setEditedData({...editedData, tiktok: e.target.value})}
+                    placeholder="https://tiktok.com/@username"
+                    className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-black/80 font-light">Snapchat</Label>
+                  <Input
+                    value={editedData.snapchat}
+                    onChange={(e) => setEditedData({...editedData, snapchat: e.target.value})}
+                    placeholder="https://snapchat.com/add/username"
+                    className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                  />
+                </div>
+              </div>
+            </Card>
           </div>
         )}
       </div>
+
+      {/* Mode édition overlay sur overview */}
+      {isEditMode && activeTab === "overview" && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-8">
+          <Card className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-light text-black">Modification rapide</h3>
+              <Button
+                onClick={() => setIsEditMode(false)}
+                variant="ghost"
+                size="sm"
+                className="rounded-full"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-black/80 font-light">Prénom</Label>
+                  <Input
+                    value={editedData.firstName}
+                    onChange={(e) => setEditedData({...editedData, firstName: e.target.value})}
+                    className="mt-2 h-10 rounded-xl border-black/10 bg-black/5"
+                  />
+                </div>
+                <div>
+                  <Label className="text-black/80 font-light">Nom</Label>
+                  <Input
+                    value={editedData.lastName}
+                    onChange={(e) => setEditedData({...editedData, lastName: e.target.value})}
+                    className="mt-2 h-10 rounded-xl border-black/10 bg-black/5"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-black/80 font-light">Téléphone</Label>
+                  <Input
+                    value={editedData.phone}
+                    onChange={(e) => setEditedData({...editedData, phone: e.target.value})}
+                    className="mt-2 h-10 rounded-xl border-black/10 bg-black/5"
+                  />
+                </div>
+                <div>
+                  <Label className="text-black/80 font-light">Email</Label>
+                  <Input
+                    value={editedData.email}
+                    onChange={(e) => setEditedData({...editedData, email: e.target.value})}
+                    className="mt-2 h-10 rounded-xl border-black/10 bg-black/5"
+                  />
+                </div>
+              </div>
+
+              <Button onClick={handleSave} className="w-full btn-accent rounded-full font-light mt-6">
+                <Save className="w-4 h-4 mr-2" />
+                Sauvegarder
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signUp } from "@/lib/auth-client";
+import { signUp, signIn } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,14 +36,17 @@ export default function SignUpPage() {
     }
 
     try {
+      // Créer le compte et se connecter automatiquement
       await signUp.email({
         email,
         password,
         name,
-        callbackURL: "/dashboard",
       });
+
+      // Rediriger vers le dashboard
       router.push("/dashboard");
     } catch (err: any) {
+      console.error("Sign-up error:", err);
       setError(err.message || "Une erreur est survenue");
     } finally {
       setIsLoading(false);
@@ -82,7 +85,7 @@ export default function SignUpPage() {
             Gérez vos talents comme jamais auparavant.
           </h2>
           <p className="text-2xl text-white/95 font-light leading-relaxed">
-            Rejoignez les agences qui ont transformé leur gestion de talents avec Pomelo.
+            Rejoignez les agences qui ont transformé leur gestion de talents avec TalentyLabs.
           </p>
         </div>
 
@@ -107,11 +110,11 @@ export default function SignUpPage() {
       {/* Partie droite - Formulaire */}
       <div className="flex flex-col items-center justify-center p-16 bg-white">
         <div className="w-full max-w-lg space-y-10">
-          {/* Logo POMELO */}
+          {/* Logo TALENTYLABS */}
           <div className="flex flex-col items-start space-y-6">
             <div>
               <h1 className="text-5xl font-light text-black tracking-tight mb-3">
-                pomelo
+                talentylabs
               </h1>
               <div className="h-1.5 w-20 bg-gradient-to-r from-purple-500 to-orange-500 rounded-full" />
             </div>

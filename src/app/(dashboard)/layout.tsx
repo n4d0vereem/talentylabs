@@ -2,16 +2,28 @@
 
 import { Sidebar } from "@/components/sidebar";
 import { useEffect } from "react";
-import { initializeColors } from "@/lib/agency-settings";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Initialiser les couleurs au chargement
+  // Initialiser les couleurs côté client uniquement
   useEffect(() => {
-    initializeColors();
+    try {
+      const stored = localStorage.getItem('talentylabs_agency_settings');
+      if (stored) {
+        const settings = JSON.parse(stored);
+        const root = document.documentElement;
+        if (settings.useDefaultColors) {
+          root.style.setProperty('--agency-primary', '#000000');
+        } else {
+          root.style.setProperty('--agency-primary', settings.primaryColor || '#000000');
+        }
+      }
+    } catch(e) {
+      console.error('Error loading colors:', e);
+    }
   }, []);
 
   return (

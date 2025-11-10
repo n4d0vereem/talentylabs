@@ -1,4 +1,4 @@
-# 🍊 POMELO - Design Final
+# 🎯 TALENTYLABS - Design Final
 
 ## ✨ Ce qui a été amélioré
 
@@ -18,7 +18,7 @@
 
 ✅ **Côté Droit - Formulaire Épuré**
 - Fond blanc pur (très clean)
-- Logo POMELO en **text-5xl**
+- Logo TalentyLabs en **text-5xl**
 - Barre de couleur sous le logo
 - Inputs très grands (**h-16**) et aérés
 - Labels plus lisibles (text-base)
@@ -29,9 +29,9 @@
 
 ## 🎨 Éléments Clés du Design
 
-### Logo POMELO
+### Logo TalentyLabs
 ```
-pomelo (text-5xl, font-light)
+talentylabs (text-5xl, font-light)
 ━━━━  (barre gradient teal → orange)
 ```
 

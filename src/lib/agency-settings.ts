@@ -1,22 +1,34 @@
 // Gestion des paramètres de l'agence dans localStorage
 
+export interface Brand {
+  id: string;
+  name: string;
+  logo?: string; // URL ou base64
+  initials: string; // Ex: "CP" pour Cruel Pancake
+  createdAt: string;
+}
+
 export interface AgencySettings {
   name: string;
   logo?: string;
   primaryColor: string;
-  secondaryColor: string;
+  secondaryColor: string; // Garde pour compatibilité mais inutilisé
   useDefaultColors: boolean;
+  talentCategories: string[];
+  brands: Brand[]; // Liste des marques partenaires
 }
 
-const STORAGE_KEY = 'pomelo_agency_settings';
+const STORAGE_KEY = 'talentylabs_agency_settings';
 
 // Paramètres par défaut (Eidoles)
 const defaultSettings: AgencySettings = {
   name: "Eidoles",
   logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQsR1VIXKGXfimfGgz9qZwKSm6mMmXoRla5Dw&s",
   primaryColor: "#000000",
-  secondaryColor: "#ff6b35",
+  secondaryColor: "#ff6b35", // Inutilisé mais garde pour compatibilité
   useDefaultColors: true,
+  talentCategories: ["Influenceur", "Créateur de contenu", "Artiste", "Sportif", "Mannequin"],
+  brands: [],
 };
 
 // Récupérer les paramètres de l'agence
@@ -39,26 +51,24 @@ export function updateAgencySettings(settings: Partial<AgencySettings>): AgencyS
   
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   
-  // Appliquer les couleurs au document
+  // Appliquer la couleur au document
   applyColors(updated);
   
   return updated;
 }
 
-// Appliquer les couleurs personnalisées
+// Appliquer la couleur d'accent personnalisée
 export function applyColors(settings: AgencySettings) {
   if (typeof window === 'undefined') return;
   
   const root = document.documentElement;
   
   if (settings.useDefaultColors) {
-    // Couleurs par défaut (noir et orange)
+    // Couleur par défaut (noir)
     root.style.setProperty('--agency-primary', '#000000');
-    root.style.setProperty('--agency-secondary', '#ff6b35');
   } else {
-    // Couleurs personnalisées
+    // Couleur personnalisée
     root.style.setProperty('--agency-primary', settings.primaryColor);
-    root.style.setProperty('--agency-secondary', settings.secondaryColor);
   }
 }
 
@@ -69,9 +79,8 @@ export function resetAgencySettings(): AgencySettings {
   return defaultSettings;
 }
 
-// Initialiser les couleurs au chargement
+// Initialiser les couleurs au chargement (inutilisé maintenant, garde pour compatibilité)
 export function initializeColors() {
   const settings = getAgencySettings();
   applyColors(settings);
 }
-

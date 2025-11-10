@@ -24,7 +24,7 @@ Enregistrez les photos que vous m'avez montrées avec ces noms **exacts** :
 ### 3️⃣ Structure finale
 
 ```
-influencer-crm/
+talentylabs/
 └── public/
     └── talents/
         ├── jade-gattoni.jpg

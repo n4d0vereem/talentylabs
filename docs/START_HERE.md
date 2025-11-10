@@ -19,7 +19,7 @@ A production-ready CRM application with:
 ### Step 1: Install Dependencies (already done ✓)
 
 ```bash
-cd influencer-crm
+cd talentylabs
 npm install  # Already completed
 ```
 
@@ -131,7 +131,7 @@ Professional interface with:
 ## 📁 Project Structure
 
 ```
-influencer-crm/
+talentylabs/
 ├── src/
 │   ├── app/                    Next.js pages
 │   │   ├── (auth)/            Auth pages
