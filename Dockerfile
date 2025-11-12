@@ -14,9 +14,14 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Accepter DATABASE_URL comme argument de build
+# Accepter les variables comme arguments de build
 ARG DATABASE_URL
+ARG NEXT_PUBLIC_BETTER_AUTH_URL
+ARG BETTER_AUTH_URL
+
 ENV DATABASE_URL=$DATABASE_URL
+ENV NEXT_PUBLIC_BETTER_AUTH_URL=$NEXT_PUBLIC_BETTER_AUTH_URL
+ENV BETTER_AUTH_URL=$BETTER_AUTH_URL
 
 # Disable Next.js telemetry
 ENV NEXT_TELEMETRY_DISABLED=1
