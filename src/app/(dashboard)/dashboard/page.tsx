@@ -2,6 +2,8 @@
 
 import { useSession } from "@/lib/auth-client";
 import { Card } from "@/components/ui/card";
+
+export const dynamic = 'force-dynamic';
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, TrendingUp, Users, Target } from "lucide-react";
 import Link from "next/link";

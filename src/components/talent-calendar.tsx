@@ -25,8 +25,6 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
-const DnDCalendar = withDragAndDrop(Calendar);
-
 interface CalendarEvent {
   id: string;
   title: string;
@@ -39,6 +37,8 @@ interface CalendarEvent {
   photo?: string; // URL ou base64 de la photo
   link?: string; // Lien externe
 }
+
+const DnDCalendar = withDragAndDrop<CalendarEvent>(Calendar);
 
 interface TalentCalendarProps {
   talentId: string;
@@ -403,13 +403,13 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
         <DnDCalendar
           localizer={localizer}
           events={events}
-          startAccessor="start"
-          endAccessor="end"
+          startAccessor={(event: CalendarEvent) => event.start}
+          endAccessor={(event: CalendarEvent) => event.end}
           style={{ height: 700 }}
           selectable
           onSelectSlot={handleSelectSlot}
-          onSelectEvent={handleEventClick}
-          eventPropGetter={eventStyleGetter}
+          onSelectEvent={(event: CalendarEvent) => handleEventClick(event)}
+          eventPropGetter={(event: CalendarEvent) => eventStyleGetter(event)}
           view={view}
           onView={(newView) => setView(newView as any)}
           date={currentDate}

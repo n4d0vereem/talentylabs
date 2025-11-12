@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+
+export const dynamic = 'force-dynamic';
 import { useSession } from "@/lib/auth-client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

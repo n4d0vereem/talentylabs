@@ -1,6 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
 
+// Force dynamic rendering (nécessaire pour éviter les erreurs de pre-rendering)
+export const dynamic = 'force-dynamic';
+
 export default function AnalyticsPage() {
   return (
     <div className="space-y-8">

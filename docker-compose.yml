@@ -1,0 +1,60 @@
+# Docker Compose pour TalentyLabs
+# Lance l'app Next.js + PostgreSQL ensemble
+
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: talentylabs-db
+    restart: always
+    environment:
+      POSTGRES_USER: talentylabs
+      POSTGRES_PASSWORD: talentylabs_password
+      POSTGRES_DB: talentylabs
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U talentylabs"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Application Next.js
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: talentylabs-app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # Database connection
+      DATABASE_URL: postgresql://talentylabs:talentylabs_password@db:5432/talentylabs
+      
+      # Better Auth (générez une vraie clé avec: openssl rand -hex 32)
+      BETTER_AUTH_SECRET: "d1032359e59425c16c8c2192910912febf07eed67113ec9b524e4c282d6d3081"
+      BETTER_AUTH_URL: "http://localhost:3000"
+      NEXT_PUBLIC_BETTER_AUTH_URL: "http://localhost:3000"
+      
+      # Node
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Pour le développement (optionnel)
+      # - .:/app
+      # - /app/node_modules
+      - app_data:/app/.next
+
+volumes:
+  postgres_data:
+    driver: local
+  app_data:
+    driver: local
+

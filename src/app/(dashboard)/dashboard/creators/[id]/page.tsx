@@ -2,6 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+export const dynamic = 'force-dynamic';
 import { Label } from "@/components/ui/label";
 import { Instagram, Phone, FileText, Image, Edit, Save, X, Footprints, TrendingUp, DollarSign, Target, Upload, Users, Heart, Eye, Calendar, Plus, Trash2, Briefcase } from "lucide-react";
 import Link from "next/link";

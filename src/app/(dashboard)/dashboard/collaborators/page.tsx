@@ -2,6 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+export const dynamic = 'force-dynamic';
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useState, useEffect } from "react";

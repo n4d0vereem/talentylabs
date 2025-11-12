@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
-    "build": "next build --webpack",
+    "build": "next build",
     "start": "next start",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
@@ -49,6 +49,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
+    "@types/react-big-calendar": "^1.16.3",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.6",
     "tailwindcss": "^4",
