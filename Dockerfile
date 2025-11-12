@@ -14,6 +14,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Accepter DATABASE_URL comme argument de build
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
+
 # Disable Next.js telemetry
 ENV NEXT_TELEMETRY_DISABLED=1
 
