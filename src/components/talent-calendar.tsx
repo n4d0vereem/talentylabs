@@ -322,9 +322,9 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
         boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
         overflow: "hidden",
         textOverflow: "ellipsis",
-        whiteSpace: "normal",
+        whiteSpace: "normal" as const,
         lineHeight: "1.4",
-        textTransform: "none",
+        textTransform: "none" as const,
       },
     };
   };
