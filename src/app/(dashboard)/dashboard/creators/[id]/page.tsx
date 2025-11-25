@@ -29,6 +29,8 @@ interface Talent {
   shoeSize?: string;
   foodIntolerances?: string;
   address?: string;
+  addressComplement?: string;
+  addressSecondary?: string;
   phone?: string;
   email?: string;
   bio?: string;
@@ -87,7 +89,11 @@ function SortableRow({ collab, onEdit }: { collab: Collaboration; onEdit: (colla
       style={style}
       {...attributes}
       {...listeners}
-      className="hover:bg-black/5 transition-colors"
+      className={`transition-colors ${
+        collab.statut === "termine"
+          ? "bg-emerald-50/40 hover:bg-emerald-50/60"
+          : "hover:bg-black/5"
+      }`}
     >
       <td className="px-6 py-4" onClick={() => onEdit(collab)}>
         <div className="flex items-center gap-3">
@@ -182,6 +188,8 @@ export default function CreatorProfilePage() {
     shoeSize: "",
     foodIntolerances: "",
     address: "",
+    addressComplement: "",
+    addressSecondary: "",
     phone: "",
     email: "",
     location: "",
@@ -285,6 +293,8 @@ export default function CreatorProfilePage() {
             shoeSize: talent.shoeSize || "",
             foodIntolerances: talent.foodIntolerances || "",
             address: talent.address || "",
+            addressComplement: talent.addressComplement || "",
+            addressSecondary: talent.addressSecondary || "",
             phone: talent.phone || "",
             email: talent.email || "",
             location: talent.location || "",
@@ -381,6 +391,8 @@ export default function CreatorProfilePage() {
         shoeSize: editedData.shoeSize,
         foodIntolerances: editedData.foodIntolerances,
         address: editedData.address,
+        addressComplement: editedData.addressComplement,
+        addressSecondary: editedData.addressSecondary,
         phone: editedData.phone,
         email: editedData.email,
         location: editedData.location,
@@ -757,7 +769,11 @@ export default function CreatorProfilePage() {
                     {collaborations.slice(0, 5).map((collab) => (
                       <div
                         key={collab.id}
-                        className="bg-black/5 rounded-2xl p-4 hover:bg-black/10 transition-colors cursor-pointer"
+                        className={`rounded-2xl p-4 transition-colors cursor-pointer ${
+                          collab.statut === "termine"
+                            ? "bg-emerald-50/40 hover:bg-emerald-50/60"
+                            : "bg-black/5 hover:bg-black/10"
+                        }`}
                         onClick={() => router.push(`/dashboard/creators/${creator.id}?tab=collaborations`)}
                       >
                         <div className="grid grid-cols-12 gap-4 items-center">
@@ -1801,6 +1817,26 @@ export default function CreatorProfilePage() {
                     value={editedData.address}
                     onChange={(e) => setEditedData({...editedData, address: e.target.value})}
                     placeholder="123 Rue de la Paix, 75001 Paris"
+                    className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-black/80 font-light">Complément d'adresse</Label>
+                  <Input
+                    value={editedData.addressComplement}
+                    onChange={(e) => setEditedData({...editedData, addressComplement: e.target.value})}
+                    placeholder="Appartement 3B, 2ème étage, Porte gauche..."
+                    className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-black/80 font-light">Adresse secondaire</Label>
+                  <Input
+                    value={editedData.addressSecondary}
+                    onChange={(e) => setEditedData({...editedData, addressSecondary: e.target.value})}
+                    placeholder="45 Rue de Lyon, 13001 Marseille"
                     className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
                   />
                 </div>

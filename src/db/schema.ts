@@ -88,6 +88,8 @@ export const talents = pgTable("talents", {
   shoeSize: text("shoe_size"),
   foodIntolerances: text("food_intolerances"),
   address: text("address"),
+  addressComplement: text("address_complement"),
+  addressSecondary: text("address_secondary"),
   phone: text("phone"),
   email: text("email"),
   bio: text("bio"),
@@ -144,7 +146,7 @@ export const calendarEvents = pgTable("calendar_events", {
   title: text("title").notNull(),
   start: timestamp("start").notNull(),
   end: timestamp("end").notNull(),
-  type: text("type").notNull(), // "rdv" | "collab"
+  type: text("type").notNull(), // "RDV" | "EVENT" | "PREVIEW" | "PUBLICATION" | "TOURNAGE"
   description: text("description"),
   location: text("location"),
   document: text("document"), // base64 ou URL

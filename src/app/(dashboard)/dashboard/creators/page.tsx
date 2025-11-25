@@ -27,6 +27,8 @@ const addCreatorSchema = z.object({
   shoeSize: z.string().optional(),
   foodIntolerances: z.string().optional(),
   address: z.string().min(1, "L'adresse est requise."),
+  addressComplement: z.string().optional(),
+  addressSecondary: z.string().optional(),
   phone: z.string().min(1, "Le numéro de téléphone est requis."),
   instagram: z.string().optional(),
   tiktok: z.string().optional(),
@@ -72,6 +74,8 @@ export default function AddCreatorPage() {
       shoeSize: "",
       foodIntolerances: "",
       address: "",
+      addressComplement: "",
+      addressSecondary: "",
       phone: "",
       instagram: "",
       tiktok: "",
@@ -100,6 +104,8 @@ export default function AddCreatorPage() {
         shoeSize: data.shoeSize || "",
         foodIntolerances: data.foodIntolerances || undefined,
         address: data.address,
+        addressComplement: data.addressComplement || undefined,
+        addressSecondary: data.addressSecondary || undefined,
         phone: data.phone,
         email: email,
         category: data.category,
@@ -316,6 +322,32 @@ export default function AddCreatorPage() {
                 {errors.address && (
                   <p className="text-red-500 text-sm mt-1">{errors.address.message}</p>
                 )}
+              </div>
+
+              <div>
+                <Label htmlFor="addressComplement" className="text-black/80 font-light">
+                  Complément d'adresse
+                </Label>
+                <Input
+                  id="addressComplement"
+                  type="text"
+                  placeholder="Appartement 3B, 2ème étage, Porte gauche..."
+                  {...register("addressComplement")}
+                  className="mt-2 h-12 rounded-xl border-black/10 bg-black/5 text-black placeholder:text-black/40 focus:border-black focus:ring-0"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="addressSecondary" className="text-black/80 font-light">
+                  Adresse secondaire
+                </Label>
+                <Input
+                  id="addressSecondary"
+                  type="text"
+                  placeholder="45 Rue de Lyon, 13001 Marseille"
+                  {...register("addressSecondary")}
+                  className="mt-2 h-12 rounded-xl border-black/10 bg-black/5 text-black placeholder:text-black/40 focus:border-black focus:ring-0"
+                />
               </div>
 
               <div>

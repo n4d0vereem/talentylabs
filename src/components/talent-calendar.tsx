@@ -30,7 +30,7 @@ interface CalendarEvent {
   title: string;
   start: Date;
   end: Date;
-  type: "rdv" | "collab";
+  type: "RDV" | "EVENT" | "PREVIEW" | "PUBLICATION" | "TOURNAGE" | "rdv" | "collab"; // Support anciens types
   description?: string;
   location?: string;
   document?: string; // URL ou base64 du document
@@ -39,6 +39,54 @@ interface CalendarEvent {
 }
 
 const DnDCalendar = withDragAndDrop<CalendarEvent>(Calendar);
+
+// Composant personnalisé pour les en-têtes de colonnes (jours de la semaine)
+const CustomHeader = ({ date, label }: { date: Date; label: string }) => {
+  const dayName = format(date, "EEEE", { locale: fr });
+  const dayNumber = format(date, "d");
+  const isToday = format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+  
+  return (
+    <div className="flex flex-col items-center py-3 px-1.5 gap-2">
+      <span className="text-xs font-normal capitalize text-gray-400">
+        {dayName}
+      </span>
+      <div className={`flex items-center justify-center rounded-xl px-4 py-2 min-w-[56px] ${
+        isToday 
+          ? "bg-black text-white" 
+          : "bg-gray-100 text-gray-700"
+      }`}>
+        <span className="text-2xl font-semibold">
+          {dayNumber}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// Composant pour les en-têtes de mois
+const CustomMonthHeader = ({ date, label }: { date: Date; label: string }) => {
+  const dayName = format(date, "EEEE", { locale: fr });
+  const dayNumber = format(date, "d");
+  const isToday = format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+  
+  return (
+    <div className="flex flex-col items-center py-2 px-1 gap-1.5">
+      <span className="text-xs font-normal capitalize text-gray-400">
+        {dayName}
+      </span>
+      <div className={`flex items-center justify-center rounded-lg px-3 py-1.5 min-w-[48px] ${
+        isToday 
+          ? "bg-black text-white" 
+          : "bg-gray-100 text-gray-700"
+      }`}>
+        <span className="text-2xl font-semibold">
+          {dayNumber}
+        </span>
+      </div>
+    </div>
+  );
+};
 
 interface TalentCalendarProps {
   talentId: string;
@@ -55,7 +103,7 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
   const [currentDate, setCurrentDate] = useState(new Date());
   const [formData, setFormData] = useState({
     title: "",
-    type: "rdv" as "rdv" | "collab",
+    type: "RDV" as "RDV" | "EVENT" | "PREVIEW" | "PUBLICATION" | "TOURNAGE" | "rdv" | "collab",
     description: "",
     location: "",
     document: null as File | null,
@@ -145,7 +193,7 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
       setIsModalOpen(false);
       setFormData({
         title: "",
-        type: "rdv",
+        type: "RDV",
         description: "",
         location: "",
         document: null,
@@ -227,21 +275,56 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
   };
 
   const eventStyleGetter = (event: CalendarEvent) => {
-    const colors = {
-      rdv: { bg: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", text: "#fff" },
-      collab: { bg: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", text: "#fff" },
+    // Dégradés modernes et trendy pour chaque type d'événement
+    const colors: Record<string, { bg: string; text: string }> = {
+      RDV: { 
+        bg: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", // Violet profond
+        text: "#ffffff" 
+      },
+      EVENT: { 
+        bg: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", // Rose/Rouge
+        text: "#ffffff" 
+      },
+      PREVIEW: { 
+        bg: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)", // Pêche/Corail
+        text: "#7c2d12" 
+      },
+      PUBLICATION: { 
+        bg: "linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)", // Bleu très doux pastel
+        text: "#4338ca" 
+      },
+      TOURNAGE: { 
+        bg: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)", // Rose/Jaune
+        text: "#ffffff" 
+      },
+      // Support anciens types
+      rdv: { 
+        bg: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        text: "#ffffff" 
+      },
+      collab: { 
+        bg: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+        text: "#ffffff" 
+      },
     };
+    
+    const eventColor = colors[event.type] || colors.RDV;
     
     return {
       style: {
-        background: colors[event.type].bg,
-        color: colors[event.type].text,
+        background: eventColor.bg,
+        color: eventColor.text,
         border: "none",
         borderRadius: "12px",
         padding: "6px 10px",
-        fontSize: "13px",
+        fontSize: "12px",
         fontWeight: "400",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        whiteSpace: "normal",
+        lineHeight: "1.4",
+        textTransform: "none",
       },
     };
   };
@@ -251,7 +334,7 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
     const upcomingEvents = events
       .filter((e) => e.start >= new Date())
       .sort((a, b) => a.start.getTime() - b.start.getTime())
-      .slice(0, 3);
+      .slice(0, 5);
 
     return (
       <div className="space-y-3">
@@ -262,9 +345,20 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
               onClick={() => router.push(`/dashboard/creators/${talentId}?tab=planning`)}
               className="p-4 rounded-2xl border border-black/5 hover:border-black/10 transition-all group cursor-pointer"
               style={{
-                background: event.type === "rdv" 
-                  ? "linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)"
-                  : "linear-gradient(135deg, rgba(240, 147, 251, 0.05) 0%, rgba(245, 87, 108, 0.05) 100%)"
+                background: 
+                  (event.type === "RDV" || event.type === "rdv") ? "linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)" :
+                  (event.type === "EVENT" || event.type === "collab") ? "linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)" :
+                  event.type === "PREVIEW" ? "linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)" :
+                  event.type === "PUBLICATION" ? "linear-gradient(135deg, #f5f7ff 0%, #eef2ff 100%)" :
+                  event.type === "TOURNAGE" ? "linear-gradient(135deg, #fef2f2 0%, #fecaca 100%)" :
+                  "linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)",
+                borderLeft: 
+                  (event.type === "RDV" || event.type === "rdv") ? "4px solid #667eea" :
+                  (event.type === "EVENT" || event.type === "collab") ? "4px solid #f093fb" :
+                  event.type === "PREVIEW" ? "4px solid #fcb69f" :
+                  event.type === "PUBLICATION" ? "4px solid #a5b4fc" :
+                  event.type === "TOURNAGE" ? "4px solid #fa709a" :
+                  "4px solid #667eea"
               }}
             >
               <div className="flex items-start justify-between gap-3">
@@ -307,9 +401,187 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
 
   // Version complète pour l'onglet Planning
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <>
+      <style jsx global>{`
+        /* Design moderne ultra-clean inspiré de l'image */
+        
+        /* Événements - Design pastel et arrondi */
+        .calendar-modern .rbc-event {
+          padding: 8px 12px !important;
+          font-size: 13px !important;
+          font-weight: 500 !important;
+          border-radius: 16px !important;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.06) !important;
+          border: none !important;
+        }
+        
+        .calendar-modern .rbc-event-content {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: normal;
+          line-height: 1.4;
+        }
+        
+        /* Vue Mois - Style moderne */
+        .calendar-modern .rbc-month-view .rbc-header {
+          padding: 12px 0 !important;
+        }
+        
+        .calendar-modern .rbc-month-view .rbc-date-cell {
+          padding: 2px 4px !important;
+          text-align: left;
+        }
+        
+        .calendar-modern .rbc-month-view .rbc-date-cell > a {
+          font-size: 13px;
+          font-weight: 500;
+          color: rgba(0, 0, 0, 0.6);
+        }
+        
+        .calendar-modern .rbc-month-view .rbc-event {
+          padding: 6px 10px !important;
+          margin: 3px 4px !important;
+          font-size: 12px !important;
+          border-radius: 12px !important;
+        }
+        
+        .calendar-modern .rbc-month-view .rbc-row-content {
+          padding-top: 4px;
+        }
+        
+        .calendar-modern .rbc-month-view .rbc-day-bg + .rbc-day-bg {
+          border-left: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .calendar-modern .rbc-month-view .rbc-month-row {
+          border-top: 1px solid rgba(0, 0, 0, 0.05);
+          min-height: 100px;
+        }
+        
+        /* Vue Semaine/Jour - Design spacieux */
+        .calendar-modern .rbc-day-slot .rbc-event {
+          padding: 6px 10px !important;
+          margin: 2px 4px !important;
+          border-radius: 14px !important;
+        }
+        
+        .calendar-modern .rbc-day-slot .rbc-events-container {
+          margin-right: 6px;
+        }
+        
+        .calendar-modern .rbc-time-slot {
+          border-top: 1px solid rgba(0, 0, 0, 0.03);
+          min-height: 50px;
+        }
+        
+        .calendar-modern .rbc-day-slot .rbc-time-slot {
+          border-top: 1px solid rgba(0, 0, 0, 0.03);
+        }
+        
+        /* En-têtes modernes */
+        .calendar-modern .rbc-time-header {
+          min-height: 50px;
+        }
+        
+        /* En-têtes des jours - Design moderne avec gros chiffres */
+        .calendar-modern .rbc-header {
+          padding: 0 !important;
+          border-bottom: none !important;
+          background: transparent;
+          overflow: visible;
+          display: block !important;
+          visibility: visible !important;
+        }
+        
+        /* Forcer l'affichage en vue jour */
+        .calendar-modern .rbc-time-view .rbc-header {
+          display: flex !important;
+          justify-content: center;
+          align-items: center;
+        }
+        
+        .calendar-modern .rbc-time-header-content {
+          border-left: none !important;
+        }
+        
+        .calendar-modern .rbc-time-header {
+          border-bottom: 2px solid rgba(0, 0, 0, 0.05) !important;
+          padding-bottom: 8px;
+        }
+        
+        /* Espacement pour les en-têtes personnalisés */
+        .calendar-modern .rbc-header + .rbc-header {
+          border-left: none !important;
+        }
+        
+        /* Colonne du jour actuel */
+        .calendar-modern .rbc-today {
+          background-color: rgba(0, 0, 0, 0.01) !important;
+        }
+        
+        .calendar-modern .rbc-time-column.rbc-today {
+          background-color: rgba(0, 0, 0, 0.015) !important;
+        }
+        
+        /* Colonne des heures */
+        .calendar-modern .rbc-time-content {
+          border-top: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .calendar-modern .rbc-label {
+          font-size: 11px;
+          color: rgba(0, 0, 0, 0.4);
+          font-weight: 400;
+          padding-right: 8px;
+        }
+        
+        .calendar-modern .rbc-timeslot-group {
+          min-height: 50px;
+        }
+        
+        /* Bordures plus douces */
+        .calendar-modern .rbc-day-slot .rbc-time-column {
+          border-left: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .calendar-modern .rbc-time-header-content {
+          border-left: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        /* "+X more" button style */
+        .calendar-modern .rbc-show-more {
+          font-size: 11px;
+          color: rgba(0, 0, 0, 0.6);
+          padding: 4px 8px;
+          margin: 2px 4px;
+          border-radius: 8px;
+          background: rgba(0, 0, 0, 0.03);
+          font-weight: 500;
+        }
+        
+        .calendar-modern .rbc-show-more:hover {
+          background: rgba(0, 0, 0, 0.06);
+        }
+        
+        /* Sélection de plage horaire */
+        .calendar-modern .rbc-slot-selection {
+          background-color: rgba(0, 0, 0, 0.1);
+          border-radius: 12px;
+        }
+        
+        /* Espacement général plus aéré */
+        .calendar-modern .rbc-time-view {
+          border: none;
+        }
+        
+        .calendar-modern .rbc-month-view {
+          border: none;
+        }
+      `}</style>
+      
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button
             variant="outline"
@@ -323,7 +595,7 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <h3 className="text-2xl font-light text-black min-w-[200px]">
+          <h3 className="text-2xl font-normal text-black min-w-[200px] capitalize">
             {format(currentDate, "MMMM yyyy", { locale: fr })}
           </h3>
           <Button
@@ -352,24 +624,24 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
           <div className="flex items-center gap-2 bg-black/5 rounded-xl p-1">
             <button
               onClick={() => setView("day")}
-              className={`px-4 py-2 rounded-lg text-sm font-light transition-all ${
-                view === "day" ? "bg-white shadow-sm text-black" : "text-black/50"
+              className={`px-4 py-2 rounded-lg text-sm font-normal transition-all ${
+                view === "day" ? "bg-white shadow-sm text-black" : "text-black/60 hover:text-black"
               }`}
             >
               Jour
             </button>
             <button
               onClick={() => setView("week")}
-              className={`px-4 py-2 rounded-lg text-sm font-light transition-all ${
-                view === "week" ? "bg-white shadow-sm text-black" : "text-black/50"
+              className={`px-4 py-2 rounded-lg text-sm font-normal transition-all ${
+                view === "week" ? "bg-white shadow-sm text-black" : "text-black/60 hover:text-black"
               }`}
             >
               Semaine
             </button>
             <button
               onClick={() => setView("month")}
-              className={`px-4 py-2 rounded-lg text-sm font-light transition-all ${
-                view === "month" ? "bg-white shadow-sm text-black" : "text-black/50"
+              className={`px-4 py-2 rounded-lg text-sm font-normal transition-all ${
+                view === "month" ? "bg-white shadow-sm text-black" : "text-black/60 hover:text-black"
               }`}
             >
               Mois
@@ -378,7 +650,7 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
 
           <Button
             onClick={() => setIsModalOpen(true)}
-            className="btn-accent rounded-xl font-light"
+            className="bg-black text-white hover:bg-black/90 rounded-xl font-normal px-5 h-10 shadow-sm"
           >
             <Plus className="w-4 h-4 mr-2" />
             Nouvel événement
@@ -386,20 +658,32 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
         </div>
       </div>
 
-      {/* Légende */}
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}></div>
-          <span className="text-sm text-black/60 font-light">Rendez-vous</span>
+      {/* Légende avec pastilles en dégradé */}
+      <div className="flex items-center gap-5 flex-wrap">
+        <div className="flex items-center gap-2.5">
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" }}></div>
+          <span className="text-sm text-black/60 font-normal">RDV</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full" style={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" }}></div>
-          <span className="text-sm text-black/60 font-light">Collaboration</span>
+        <div className="flex items-center gap-2.5">
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" }}></div>
+          <span className="text-sm text-black/60 font-normal">EVENT</span>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)" }}></div>
+          <span className="text-sm text-black/60 font-normal">PREVIEW</span>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: "linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)" }}></div>
+          <span className="text-sm text-black/60 font-normal">PUBLICATION</span>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)" }}></div>
+          <span className="text-sm text-black/60 font-normal">TOURNAGE</span>
         </div>
       </div>
 
       {/* Calendrier */}
-      <div className="bg-white rounded-3xl overflow-hidden border border-black/5 p-6 calendar-modern">
+      <div className="bg-white rounded-2xl overflow-hidden border border-black/5 p-8 calendar-modern shadow-sm">
         <DnDCalendar
           localizer={localizer}
           events={events}
@@ -419,6 +703,18 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
           onEventDrop={handleEventDrop}
           onEventResize={handleEventResize}
           scrollToTime={new Date()}
+          components={{
+            timeGutterHeader: () => null,
+            week: {
+              header: CustomHeader,
+            },
+            day: {
+              header: CustomHeader,
+            },
+            month: {
+              header: CustomMonthHeader,
+            },
+          }}
           messages={{
             next: "Suivant",
             previous: "Précédent",
@@ -469,11 +765,14 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
                 <Label className="text-black/80 font-light">Type</Label>
                 <select
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as "rdv" | "collab" })}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value as "RDV" | "EVENT" | "PREVIEW" | "PUBLICATION" | "TOURNAGE" | "rdv" | "collab" })}
                   className="mt-2 h-12 w-full rounded-xl border border-black/10 bg-black/5 px-4 text-black font-light"
                 >
-                  <option value="rdv">Rendez-vous</option>
-                  <option value="collab">Collaboration</option>
+                  <option value="RDV">RDV</option>
+                  <option value="EVENT">EVENT</option>
+                  <option value="PREVIEW">PREVIEW</option>
+                  <option value="PUBLICATION">PUBLICATION</option>
+                  <option value="TOURNAGE">TOURNAGE</option>
                 </select>
               </div>
 
@@ -595,15 +894,19 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <div 
-                    className="w-3 h-3 rounded-full" 
+                    className="w-4 h-4 rounded-lg" 
                     style={{ 
-                      background: selectedEvent.type === "rdv" 
-                        ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                        : "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
+                      background: 
+                        (selectedEvent.type === "RDV" || selectedEvent.type === "rdv") ? "#C7D2FE" :
+                        (selectedEvent.type === "EVENT" || selectedEvent.type === "collab") ? "#FBC4E4" :
+                        selectedEvent.type === "PREVIEW" ? "#FEF3C7" :
+                        selectedEvent.type === "PUBLICATION" ? "#e0e7ff" :
+                        selectedEvent.type === "TOURNAGE" ? "#FED7AA" :
+                        "#C7D2FE"
                     }}
                   />
                   <span className="text-xs text-black/50 font-medium uppercase tracking-wide">
-                    {selectedEvent.type === "rdv" ? "Rendez-vous" : "Collaboration"}
+                    {selectedEvent.type === "rdv" ? "RDV" : selectedEvent.type === "collab" ? "EVENT" : selectedEvent.type}
                   </span>
                 </div>
                 <h3 className="text-3xl font-light text-black">{selectedEvent.title}</h3>
@@ -708,6 +1011,7 @@ export function TalentCalendar({ talentId, compact = false }: TalentCalendarProp
           </Card>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
