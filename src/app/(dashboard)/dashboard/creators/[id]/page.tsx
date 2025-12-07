@@ -203,28 +203,25 @@ function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoI
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-start gap-3 p-4 rounded-2xl transition-all ${
+      {...attributes}
+      {...listeners}
+      className={`group relative flex items-start gap-3 p-4 rounded-2xl transition-all ${
         todo.completed 
-          ? "bg-gray-100" 
-          : "bg-black/5 hover:bg-black/10"
+          ? "bg-gray-100 cursor-default" 
+          : "bg-black/5 hover:bg-black/10 cursor-grab active:cursor-grabbing"
       } ${isDragging ? 'shadow-lg' : ''}`}
     >
-      <div 
-        {...attributes}
-        {...listeners}
-        className={`flex items-center justify-center ${todo.completed ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}`}
+      {/* Croix de suppression en haut à droite */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(todo.id);
+        }}
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 rounded-full hover:bg-black/10 flex items-center justify-center text-black/40 hover:text-red-600 hidden sm:flex"
       >
-        <div className="w-5 h-5 flex items-center justify-center text-black/30 hover:text-black/60">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="4" cy="4" r="1.5" fill="currentColor"/>
-            <circle cx="12" cy="4" r="1.5" fill="currentColor"/>
-            <circle cx="4" cy="8" r="1.5" fill="currentColor"/>
-            <circle cx="12" cy="8" r="1.5" fill="currentColor"/>
-            <circle cx="4" cy="12" r="1.5" fill="currentColor"/>
-            <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-          </svg>
-        </div>
-      </div>
+        <X className="w-4 h-4" />
+      </button>
+      
       <input
         type="checkbox"
         checked={todo.completed}
@@ -235,7 +232,7 @@ function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoI
         onClick={(e) => e.stopPropagation()}
         className="mt-1 rounded border-black/20 cursor-pointer shrink-0"
       />
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 pr-8">
         <p className={`text-sm font-light break-words ${
           todo.completed 
             ? "text-gray-400 line-through" 
@@ -251,30 +248,17 @@ function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoI
           </p>
         )}
       </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            onArchive(todo.id);
-          }}
-          variant="ghost"
-          size="sm"
-          className="h-8 px-3 rounded-lg hover:bg-black/5 text-xs text-black/60 hover:text-black"
-        >
-          Archiver
-        </Button>
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(todo.id);
-          }}
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 rounded-lg hover:bg-red-50 text-red-600 hidden sm:flex items-center justify-center"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
+      <Button
+        onClick={(e) => {
+          e.stopPropagation();
+          onArchive(todo.id);
+        }}
+        variant="ghost"
+        size="sm"
+        className="opacity-0 group-hover:opacity-100 transition-opacity h-8 px-3 rounded-lg hover:bg-black/5 text-xs text-black/60 hover:text-black shrink-0"
+      >
+        Archiver
+      </Button>
     </div>
   );
 }
