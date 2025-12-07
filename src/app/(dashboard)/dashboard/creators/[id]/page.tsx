@@ -923,11 +923,11 @@ export default function CreatorProfilePage() {
             </div>
 
             {/* Grid 2 colonnes pour Planning/Finance et Todolist */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 lg:items-start">
               {/* Colonne gauche: Planning et Finance */}
-              <div className="space-y-6">
+              <div className="flex flex-col gap-6 h-full">
                 {/* Événements à venir - Toutes les collaborations */}
-                <Card className="bg-white border border-black/5 rounded-3xl p-8">
+                <Card className="bg-white border border-black/5 rounded-3xl p-8 flex-1">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-2xl font-light text-black">Événements à venir</h3>
                     <Button
@@ -942,7 +942,7 @@ export default function CreatorProfilePage() {
                   </div>
                   
                   {/* Liste scrollable des événements du planning */}
-                  <div className="max-h-[400px] overflow-y-auto space-y-3 pr-2">
+                  <div className="max-h-[350px] overflow-y-auto space-y-3 pr-2">
                     {upcomingEvents.length > 0 ? (
                       upcomingEvents.map((event) => {
                         const eventTypeColors: Record<string, string> = {
@@ -1012,7 +1012,7 @@ export default function CreatorProfilePage() {
                 </Card>
 
                 {/* Finance */}
-                <Card className="bg-white border border-black/5 rounded-3xl p-8">
+                <Card className="bg-white border border-black/5 rounded-3xl p-8 flex-shrink-0">
                   <h3 className="text-xl sm:text-2xl font-light text-black mb-4 sm:mb-6">Finance</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
@@ -1036,7 +1036,7 @@ export default function CreatorProfilePage() {
               </div>
 
               {/* Colonne droite: Todo List */}
-              <Card className="bg-white border border-black/5 rounded-3xl p-8">
+              <Card className="bg-white border border-black/5 rounded-3xl p-8 flex flex-col h-full lg:min-h-[800px]">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-2xl font-light text-black">To-do List</h3>
                   <div className="flex gap-2">
@@ -1109,16 +1109,17 @@ export default function CreatorProfilePage() {
                 )}
 
                 {/* Liste des todos actifs avec drag & drop */}
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleTodoDragEnd}
-                >
-                  <SortableContext
-                    items={todos.filter(t => !t.archived && !t.completed).map(t => t.id)}
-                    strategy={verticalListSortingStrategy}
+                <div className="flex-1 overflow-y-auto pr-2 mb-4 max-h-[600px]">
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleTodoDragEnd}
                   >
-                    <div className="space-y-3 mb-4">
+                    <SortableContext
+                      items={todos.filter(t => !t.archived && !t.completed).map(t => t.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-3">
                       {todos.filter(t => !t.archived).length > 0 ? (
                         todos.filter(t => !t.archived).map((todo) => (
                           <SortableTodoItem
@@ -1161,9 +1162,10 @@ export default function CreatorProfilePage() {
                           <p className="text-black/40 font-light text-sm">Aucune tâche</p>
                         </div>
                       )}
-                    </div>
-                  </SortableContext>
-                </DndContext>
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                </div>
 
                 {/* Stats en bas */}
                 <div className="flex items-center justify-between pt-4 border-t border-black/5">
