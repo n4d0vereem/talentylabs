@@ -211,15 +211,15 @@ function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoI
           : "bg-black/5 hover:bg-black/10 cursor-grab active:cursor-grabbing"
       } ${isDragging ? 'shadow-lg' : ''}`}
     >
-      {/* Croix de suppression en haut à droite */}
+      {/* Croix de suppression en haut à droite (desktop uniquement) */}
       <button
         onClick={(e) => {
           e.stopPropagation();
           onDelete(todo.id);
         }}
-        className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full hover:bg-red-50 flex items-center justify-center text-black/30 hover:text-red-600 transition-all opacity-0 group-hover:opacity-100 pointer-events-auto hidden sm:flex"
+        className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full hover:bg-red-50 items-center justify-center text-black/40 hover:text-red-600 transition-all opacity-0 group-hover:opacity-100 pointer-events-auto hidden lg:flex"
       >
-        <X className="w-3.5 h-3.5" />
+        <X className="w-4 h-4" />
       </button>
       
       <input
