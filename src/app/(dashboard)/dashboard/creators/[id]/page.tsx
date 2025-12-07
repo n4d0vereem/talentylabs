@@ -211,17 +211,6 @@ function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoI
           : "bg-black/5 hover:bg-black/10 cursor-grab active:cursor-grabbing"
       } ${isDragging ? 'shadow-lg' : ''}`}
     >
-      {/* Croix de suppression en haut à droite (desktop uniquement) */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete(todo.id);
-        }}
-        className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full hover:bg-red-50 items-center justify-center text-black/40 hover:text-red-600 transition-all opacity-0 group-hover:opacity-100 pointer-events-auto hidden lg:flex"
-      >
-        <X className="w-4 h-4" />
-      </button>
-      
       <input
         type="checkbox"
         checked={todo.completed}
@@ -232,7 +221,7 @@ function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoI
         onClick={(e) => e.stopPropagation()}
         className="mt-1 rounded border-black/20 cursor-pointer shrink-0"
       />
-      <div className="flex-1 min-w-0 pr-8">
+      <div className="flex-1 min-w-0">
         <p className={`text-sm font-light break-words ${
           todo.completed 
             ? "text-gray-400 line-through" 
@@ -248,17 +237,26 @@ function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoI
           </p>
         )}
       </div>
-      <Button
-        onClick={(e) => {
-          e.stopPropagation();
-          onArchive(todo.id);
-        }}
-        variant="ghost"
-        size="sm"
-        className="opacity-0 group-hover:opacity-100 transition-opacity h-8 px-3 rounded-lg hover:bg-black/5 text-xs text-black/60 hover:text-black shrink-0"
-      >
-        Archiver
-      </Button>
+      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onArchive(todo.id);
+          }}
+          className="text-xs text-black/40 hover:text-black font-light"
+        >
+          Archiver
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(todo.id);
+          }}
+          className="w-5 h-5 rounded-full hover:bg-red-50 flex items-center justify-center text-black/30 hover:text-red-600 transition-colors hidden sm:flex"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -941,8 +939,8 @@ export default function CreatorProfilePage() {
                     </Button>
                   </div>
                   
-                  {/* Liste scrollable des événements du planning */}
-                  <div className="max-h-[350px] overflow-y-auto space-y-3 pr-2">
+                  {/* Liste scrollable des événements du planning (max 3 visibles) */}
+                  <div className="max-h-[250px] overflow-y-auto space-y-3 pr-2">
                     {upcomingEvents.length > 0 ? (
                       upcomingEvents.map((event) => {
                         const eventTypeColors: Record<string, string> = {
@@ -1036,7 +1034,7 @@ export default function CreatorProfilePage() {
               </div>
 
               {/* Colonne droite: Todo List */}
-              <Card className="bg-white border border-black/5 rounded-3xl p-8 flex flex-col h-full lg:min-h-[800px]">
+              <Card className="bg-white border border-black/5 rounded-3xl p-8 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-2xl font-light text-black">To-do List</h3>
                   <div className="flex gap-2">
@@ -1109,7 +1107,7 @@ export default function CreatorProfilePage() {
                 )}
 
                 {/* Liste des todos actifs avec drag & drop */}
-                <div className="flex-1 overflow-y-auto pr-2 mb-4 max-h-[600px]">
+                <div className="flex-1 overflow-y-auto pr-2 mb-4 max-h-[400px]">
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
