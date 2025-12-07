@@ -299,6 +299,81 @@ export async function deleteMediaKit(talentId: string) {
 }
 
 // ============================================
+// DOCUMENTS
+// ============================================
+
+export async function getDocuments(talentId: string) {
+  const res = await fetch(`${API_BASE}/documents?talentId=${talentId}`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to fetch documents");
+  return res.json();
+}
+
+export async function createDocument(data: { talentId: string; name: string; fileUrl: string }) {
+  const res = await fetch(`${API_BASE}/documents`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create document");
+  return res.json();
+}
+
+export async function deleteDocument(documentId: string) {
+  const res = await fetch(`${API_BASE}/documents?documentId=${documentId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to delete document");
+  return res.json();
+}
+
+// ============================================
+// TODOS
+// ============================================
+
+export async function getTodos(talentId: string) {
+  const res = await fetch(`${API_BASE}/todos?talentId=${talentId}`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to fetch todos");
+  return res.json();
+}
+
+export async function createTodo(data: { talentId: string; text: string; deadline?: string }) {
+  const res = await fetch(`${API_BASE}/todos`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create todo");
+  return res.json();
+}
+
+export async function updateTodo(todoId: string, data: { completed?: boolean; archived?: boolean }) {
+  const res = await fetch(`${API_BASE}/todos`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ todoId, ...data }),
+  });
+  if (!res.ok) throw new Error("Failed to update todo");
+  return res.json();
+}
+
+export async function deleteTodo(todoId: string) {
+  const res = await fetch(`${API_BASE}/todos?todoId=${todoId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to delete todo");
+  return res.json();
+}
+
+// ============================================
 // USER PROFILE
 // ============================================
 

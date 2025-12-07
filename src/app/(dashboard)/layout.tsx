@@ -1,6 +1,7 @@
 "use client";
 
 import { Sidebar } from "@/components/sidebar";
+import { PWAInstall } from "@/components/pwa-install";
 import { useEffect } from "react";
 
 export default function DashboardLayout({
@@ -33,6 +34,9 @@ export default function DashboardLayout({
       <div className="lg:pl-72">
         {children}
       </div>
+
+      {/* PWA Install Prompt */}
+      <PWAInstall />
     </div>
   );
 }

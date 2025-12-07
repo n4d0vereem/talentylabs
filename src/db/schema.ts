@@ -179,6 +179,11 @@ export const talentInsights = pgTable("talent_insights", {
   snapchatFollowers: text("snapchat_followers"),
   snapchatViews: text("snapchat_views"),
   
+  // YouTube
+  youtubeSubscribers: text("youtube_subscribers"),
+  youtubeEngagement: text("youtube_engagement"),
+  youtubeAvgViews: text("youtube_avg_views"),
+  
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
@@ -190,6 +195,33 @@ export const mediaKits = pgTable("media_kits", {
   id: text("id").primaryKey(),
   talentId: text("talent_id").notNull().references(() => talents.id, { onDelete: "cascade" }).unique(),
   pdfUrl: text("pdf_url").notNull(), // base64 ou URL
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ============================================
+// DOCUMENTS (Passeport, ID, contrats, etc.)
+// ============================================
+
+export const talentDocuments = pgTable("talent_documents", {
+  id: text("id").primaryKey(),
+  talentId: text("talent_id").notNull().references(() => talents.id, { onDelete: "cascade" }),
+  name: text("name").notNull(), // "Passeport", "Carte d'identité", "Contrat", etc.
+  fileUrl: text("file_url").notNull(), // base64 ou URL du PDF/image
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+});
+
+// ============================================
+// TODOS (To-do list pour chaque talent)
+// ============================================
+
+export const talentTodos = pgTable("talent_todos", {
+  id: text("id").primaryKey(),
+  talentId: text("talent_id").notNull().references(() => talents.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  deadline: text("deadline"), // Format: YYYY-MM-DD
+  completed: boolean("completed").default(false).notNull(),
+  archived: boolean("archived").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -251,6 +283,8 @@ export const talentsRelations = relations(talents, ({ one, many }) => ({
   events: many(calendarEvents),
   insights: one(talentInsights),
   mediaKit: one(mediaKits),
+  documents: many(talentDocuments),
+  todos: many(talentTodos),
 }));
 
 export const collaborationsRelations = relations(collaborations, ({ one }) => ({

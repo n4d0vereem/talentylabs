@@ -143,3 +143,6 @@ Pour migrer les collaborations existantes :
 
 **Note** : Cette fonctionnalité est active dès maintenant pour toutes les nouvelles collaborations et modifications. La migration des données existantes doit être lancée manuellement via la route API.
 
+
+
+

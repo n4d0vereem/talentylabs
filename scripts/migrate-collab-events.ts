@@ -116,3 +116,6 @@ async function migrateCollaborationEvents() {
 // Exécuter la migration
 migrateCollaborationEvents();
 
+
+
+

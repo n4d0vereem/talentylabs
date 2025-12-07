@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { AvatarUpload } from "@/components/avatar-upload";
 import { useState, useEffect } from "react";
-import { getTalentById, updateTalent, getInsights, saveInsights, getMediaKit, saveMediaKit, deleteMediaKit, getCollaborations, createCollaboration, updateCollaboration as updateCollaborationAPI, deleteCollaboration as deleteCollaborationAPI, reorderCollaborations, getCategories } from "@/lib/api-client";
+import { getTalentById, updateTalent, getInsights, saveInsights, getMediaKit, saveMediaKit, deleteMediaKit, getCollaborations, createCollaboration, updateCollaboration as updateCollaborationAPI, deleteCollaboration as deleteCollaborationAPI, reorderCollaborations, getCategories, getDocuments, createDocument, deleteDocument, getTodos, createTodo, updateTodo, deleteTodo } from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
 import { TalentCalendar } from "@/components/talent-calendar";
 import { useAgencyId } from "@/lib/temp-agency";
@@ -208,6 +208,9 @@ export default function CreatorProfilePage() {
     tiktokViews: "",
     snapchatFollowers: "",
     snapchatViews: "",
+    youtubeSubscribers: "",
+    youtubeEngagement: "",
+    youtubeAvgViews: "",
   });
 
   const [collaborations, setCollaborations] = useState<Collaboration[]>([]);
@@ -226,6 +229,32 @@ export default function CreatorProfilePage() {
     facture: "",
     statut: "en_cours" as "en_cours" | "termine" | "annule",
   });
+
+  // State pour les todos
+  interface Todo {
+    id: string;
+    text: string;
+    deadline: string;
+    completed: boolean;
+    archived: boolean;
+  }
+
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [isAddingTodo, setIsAddingTodo] = useState(false);
+  const [newTodoText, setNewTodoText] = useState("");
+  const [newTodoDeadline, setNewTodoDeadline] = useState("");
+
+  // State pour les documents
+  interface Document {
+    id: string;
+    talentId: string;
+    name: string;
+    fileUrl: string;
+    uploadedAt: string;
+  }
+
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
 
   // Sensors pour le drag and drop avec press delay
   const sensors = useSensors(
@@ -317,6 +346,9 @@ export default function CreatorProfilePage() {
               tiktokViews: insights.tiktokViews || "",
               snapchatFollowers: insights.snapchatFollowers || "",
               snapchatViews: insights.snapchatViews || "",
+              youtubeSubscribers: insights.youtubeSubscribers || "",
+              youtubeEngagement: insights.youtubeEngagement || "",
+              youtubeAvgViews: insights.youtubeAvgViews || "",
             });
           } else {
             // Données par défaut depuis instagramData si disponible
@@ -330,6 +362,9 @@ export default function CreatorProfilePage() {
               tiktokViews: "",
               snapchatFollowers: "",
               snapchatViews: "",
+              youtubeSubscribers: "",
+              youtubeEngagement: "",
+              youtubeAvgViews: "",
             });
           }
 
@@ -342,6 +377,14 @@ export default function CreatorProfilePage() {
           // Charger les collaborations via l'API
           const collabs = await getCollaborations(creatorId);
           setCollaborations(collabs);
+
+          // Charger les todos via l'API
+          const todosData = await getTodos(creatorId);
+          setTodos(todosData);
+
+          // Charger les documents via l'API
+          const docsData = await getDocuments(creatorId);
+          setDocuments(docsData);
         }
       } catch (error) {
         console.error("Erreur lors du chargement des données:", error);
@@ -578,16 +621,26 @@ export default function CreatorProfilePage() {
   return (
     <div className="min-h-screen bg-[#fafaf9]">
       {/* Header */}
-      <div className="border-b border-black/5 bg-white px-8 py-6">
-        <Link href="/dashboard" className="text-sm text-black/60 hover:text-black font-light mb-4 inline-block">
+      <div className="border-b border-black/5 bg-white px-4 sm:px-8 py-4 sm:py-6">
+        <Link href="/dashboard" className="text-sm text-black/60 hover:text-black font-light mb-4 inline-block pl-12 sm:pl-0">
           ← Retour à la liste
         </Link>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 sm:gap-5 w-full sm:w-auto pl-12 sm:pl-0">
+            {/* Photo du talent */}
+            <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-black/5 flex-shrink-0">
+              <img 
+                src={creatorImage} 
+                alt={`${creator.firstName} ${creator.lastName}`}
+                className="w-full h-full object-cover"
+              />
+            </div>
           <div>
-            <h1 className="text-4xl font-light text-black">
+              <h1 className="text-2xl sm:text-4xl font-light text-black">
               Hello {creator.firstName} 👋
             </h1>
-            <p className="text-sm text-black/40 font-light mt-1">{creator.category}</p>
+              <p className="text-xs sm:text-sm text-black/40 font-light mt-1">{creator.category}</p>
+            </div>
           </div>
           {activeTab === "overview" && !isEditMode && (
             <Button
@@ -604,11 +657,11 @@ export default function CreatorProfilePage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-[1600px] mx-auto p-8">
+      <div className="max-w-[1600px] mx-auto p-4 sm:p-6 lg:p-8">
         {activeTab === "overview" && (
           <div>
             {/* Stats globales tous réseaux */}
-            <div className="grid grid-cols-4 gap-6 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6">
               <Card className="bg-white border border-black/5 rounded-3xl p-6">
                 <div className="flex items-center gap-3 mb-2">
                   <Users className="w-5 h-5 text-black/40" />
@@ -648,54 +701,11 @@ export default function CreatorProfilePage() {
               </Card>
             </div>
 
-            <div className="grid grid-cols-12 gap-6">
-              {/* Photo + Infos rapides */}
-              <div className="col-span-12 lg:col-span-4">
-                <Card className="bg-white border border-black/5 rounded-3xl p-8">
-                  <AvatarUpload
-                    currentImage={creatorImage}
-                    creatorName={`${creator.firstName} ${creator.lastName}`}
-                    onImageChange={setCreatorImage}
-                    className="aspect-square w-full mb-6"
-                  />
-                  <h2 className="text-2xl font-light text-black mb-1">
-                    {creator.firstName} {creator.lastName}
-                  </h2>
-                  <p className="text-sm text-black/40 font-light mb-6">
-                    {creator.instagramData?.handle || creator.category}
-                  </p>
-                  
-                  {(displayFollowers || displayEngagement || displayAvgLikes) && (
-                    <div className="grid grid-cols-3 gap-3 mb-6">
-                      <div className="text-center p-3 bg-black/5 rounded-xl">
-                        <p className="text-xl font-light text-black">{displayFollowers}</p>
-                        <p className="text-xs text-black/40 font-light">Followers</p>
-                      </div>
-                      <div className="text-center p-3 bg-black/5 rounded-xl">
-                        <p className="text-xl font-light text-black">{displayEngagement}</p>
-                        <p className="text-xs text-black/40 font-light">Engagement</p>
-                      </div>
-                      <div className="text-center p-3 bg-black/5 rounded-xl">
-                        <p className="text-xl font-light text-black">{displayAvgLikes}</p>
-                        <p className="text-xs text-black/40 font-light">Avg Likes</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {creator.instagram && (
-                    <a href={creator.instagram} target="_blank" rel="noopener noreferrer">
-                      <Button className="w-full btn-accent rounded-full font-light">
-                        <Instagram className="w-4 h-4 mr-2" />
-                        Voir Instagram
-                      </Button>
-                    </a>
-                  )}
-                </Card>
-              </div>
-
-              {/* Planning et Finance */}
-              <div className="col-span-12 lg:col-span-8 space-y-6">
-                {/* Planning Mini */}
+            {/* Grid 2 colonnes pour Planning/Finance et Todolist */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Colonne gauche: Planning et Finance */}
+              <div className="space-y-6">
+                {/* Événements à venir - Toutes les collaborations */}
                 <Card className="bg-white border border-black/5 rounded-3xl p-8">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-2xl font-light text-black">Événements à venir</h3>
@@ -709,13 +719,86 @@ export default function CreatorProfilePage() {
                       Voir le planning complet
                     </Button>
                   </div>
-                  <TalentCalendar talentId={creator.id} compact />
+                  
+                  {/* Liste scrollable des collaborations */}
+                  <div className="max-h-[400px] overflow-y-auto space-y-3 pr-2">
+                    {collaborations.length > 0 ? (
+                      collaborations.map((collab) => (
+                        <div
+                          key={collab.id}
+                          className={`rounded-2xl p-4 transition-colors cursor-pointer ${
+                            collab.statut === "termine"
+                              ? "bg-emerald-50/40 hover:bg-emerald-50/60"
+                              : "bg-black/5 hover:bg-black/10"
+                          }`}
+                          onClick={() => router.push(`/dashboard/creators/${creator.id}?tab=collaborations`)}
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-black to-black/80 flex items-center justify-center flex-shrink-0">
+                                <span className="text-sm font-medium text-white">
+                                  {collab.marque.substring(0, 2).toUpperCase()}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-black">{collab.marque}</p>
+                                <p className="text-sm text-black/60">{collab.mois}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium text-black">{parseFloat(collab.budget).toLocaleString('fr-FR')}€</p>
+                              {collab.datePublication && (
+                                <p className="text-xs text-black/40">{new Date(collab.datePublication).toLocaleDateString('fr-FR')}</p>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Badges et infos */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                collab.type === "entrant"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-orange-100 text-orange-700"
+                              }`}
+                            >
+                              {collab.type === "entrant" ? "Entrant" : "Sortant"}
+                            </span>
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                collab.statut === "en_cours"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : collab.statut === "termine"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-red-100 text-red-700"
+                              }`}
+                            >
+                              {collab.statut === "en_cours"
+                                ? "En cours"
+                                : collab.statut === "termine"
+                                ? "Terminé"
+                                : "Annulé"}
+                            </span>
+                            {collab.contenu && (
+                              <span className="text-xs text-black/60 font-light">
+                                {collab.contenu}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-black/40 font-light">Aucune collaboration à venir</p>
+                      </div>
+                    )}
+                  </div>
                 </Card>
 
                 {/* Finance */}
                 <Card className="bg-white border border-black/5 rounded-3xl p-8">
-                  <h3 className="text-2xl font-light text-black mb-6">Finance</h3>
-                  <div className="grid grid-cols-3 gap-4">
+                  <h3 className="text-xl sm:text-2xl font-light text-black mb-4 sm:mb-6">Finance</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <p className="text-sm text-black/40 font-light mb-1">CA cumulé</p>
                       <p className="text-3xl font-light text-black">
@@ -735,6 +818,169 @@ export default function CreatorProfilePage() {
                   </div>
                 </Card>
               </div>
+
+              {/* Colonne droite: Todo List */}
+              <Card className="bg-white border border-black/5 rounded-3xl p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-2xl font-light text-black">To-do List</h3>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setIsAddingTodo(true)}
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl font-light border-black/10"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ajouter
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Formulaire d'ajout de todo */}
+                {isAddingTodo && (
+                  <div className="mb-4 p-4 bg-black/5 rounded-2xl space-y-3">
+                    <Input
+                      placeholder="Nouvelle tâche..."
+                      value={newTodoText}
+                      onChange={(e) => setNewTodoText(e.target.value)}
+                      className="h-10 rounded-xl border-black/10 bg-white"
+                    />
+                    <Input
+                      type="date"
+                      value={newTodoDeadline}
+                      onChange={(e) => setNewTodoDeadline(e.target.value)}
+                      className="h-10 rounded-xl border-black/10 bg-white"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={async () => {
+                          if (newTodoText.trim()) {
+                            try {
+                              const newTodo = await createTodo({
+                                talentId: creatorId,
+                                text: newTodoText,
+                                deadline: newTodoDeadline || undefined,
+                              });
+                              setTodos([...todos, newTodo]);
+                              setNewTodoText("");
+                              setNewTodoDeadline("");
+                              setIsAddingTodo(false);
+                            } catch (error) {
+                              console.error("Erreur lors de la création du todo:", error);
+                              alert("❌ Erreur lors de la création");
+                            }
+                          }
+                        }}
+                        size="sm"
+                        className="btn-accent rounded-xl font-light"
+                      >
+                        Créer
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setIsAddingTodo(false);
+                          setNewTodoText("");
+                          setNewTodoDeadline("");
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="rounded-xl font-light border-black/10"
+                      >
+                        Annuler
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Liste des todos actifs */}
+                <div className="space-y-2 mb-4">
+                  {todos.filter(t => !t.archived).length > 0 ? (
+                    todos.filter(t => !t.archived).map((todo) => (
+                      <div
+                        key={todo.id}
+                        className={`group flex items-start gap-3 p-4 rounded-2xl transition-all ${
+                          todo.completed 
+                            ? "bg-gray-100" 
+                            : "bg-black/5 hover:bg-black/10"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={todo.completed}
+                          onChange={async () => {
+                            try {
+                              await updateTodo(todo.id, { completed: !todo.completed });
+                              setTodos(todos.map(t => 
+                                t.id === todo.id ? { ...t, completed: !t.completed } : t
+                              ));
+                            } catch (error) {
+                              console.error("Erreur lors de la mise à jour du todo:", error);
+                            }
+                          }}
+                          className="mt-1 rounded border-black/20 cursor-pointer"
+                        />
+                        <div className="flex-1">
+                          <p className={`text-sm font-light ${
+                            todo.completed 
+                              ? "text-gray-400 line-through" 
+                              : "text-black"
+                          }`}>
+                            {todo.text}
+                          </p>
+                          {todo.deadline && (
+                            <p className={`text-xs font-light mt-1 ${
+                              todo.completed ? "text-gray-300" : "text-black/40"
+                            }`}>
+                              Échéance: {new Date(todo.deadline).toLocaleDateString('fr-FR')}
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          onClick={async () => {
+                            try {
+                              await updateTodo(todo.id, { archived: true });
+                              setTodos(todos.map(t => 
+                                t.id === todo.id ? { ...t, archived: true } : t
+                              ));
+                            } catch (error) {
+                              console.error("Erreur lors de l'archivage du todo:", error);
+                            }
+                          }}
+                          variant="ghost"
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity rounded-xl text-black/40 hover:text-black"
+                        >
+                          Archiver
+                        </Button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-black/40 font-light text-sm">Aucune tâche</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Stats en bas */}
+                <div className="flex items-center justify-between pt-4 border-t border-black/5">
+                  <p className="text-sm text-black/40 font-light">
+                    {todos.filter(t => !t.archived && !t.completed).length} tâche{todos.filter(t => !t.archived && !t.completed).length > 1 ? 's' : ''} restante{todos.filter(t => !t.archived && !t.completed).length > 1 ? 's' : ''}
+                  </p>
+                  {todos.filter(t => t.archived).length > 0 && (
+                    <Button
+                      onClick={() => {
+                        // Option pour voir les todos archivés
+                        alert(`${todos.filter(t => t.archived).length} tâche(s) archivée(s)`);
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-black/40 hover:text-black font-light"
+                    >
+                      {todos.filter(t => t.archived).length} archivée{todos.filter(t => t.archived).length > 1 ? 's' : ''}
+                    </Button>
+                  )}
+                </div>
+              </Card>
             </div>
 
             {/* Campaigns Manager - Tableau en bas */}
@@ -757,6 +1003,8 @@ export default function CreatorProfilePage() {
               <div className="space-y-3">
                 {collaborations.length > 0 ? (
                   <>
+                    {/* Version Desktop - Grid */}
+                    <div className="hidden lg:block">
                     <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs text-black/40 font-light uppercase">
                       <div className="col-span-3">Marque</div>
                       <div className="col-span-2">Mois</div>
@@ -821,6 +1069,69 @@ export default function CreatorProfilePage() {
                         </div>
                       </div>
                     ))}
+                    </div>
+
+                    {/* Version Mobile - Cards épurées */}
+                    <div className="lg:hidden space-y-3">
+                      {collaborations.slice(0, 5).map((collab) => (
+                        <div
+                          key={collab.id}
+                          className={`rounded-2xl p-4 transition-colors cursor-pointer ${
+                            collab.statut === "termine"
+                              ? "bg-emerald-50/40 hover:bg-emerald-50/60"
+                              : "bg-black/5 hover:bg-black/10"
+                          }`}
+                          onClick={() => router.push(`/dashboard/creators/${creator.id}?tab=collaborations`)}
+                        >
+                          {/* Ligne 1: Marque + Budget */}
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-black to-black/80 flex items-center justify-center flex-shrink-0">
+                                <span className="text-sm font-medium text-white">
+                                  {collab.marque.substring(0, 2).toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-black truncate">{collab.marque}</p>
+                                <p className="text-xs text-black/60">{collab.mois}</p>
+                              </div>
+                            </div>
+                            <p className="text-lg font-medium text-black ml-3">{parseFloat(collab.budget).toLocaleString('fr-FR')}€</p>
+                          </div>
+
+                          {/* Ligne 2: Badges Type + Statut */}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                collab.type === "entrant"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-orange-100 text-orange-700"
+                              }`}
+                            >
+                              {collab.type === "entrant" ? "Entrant" : "Sortant"}
+                            </span>
+                            <span
+                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                collab.statut === "en_cours"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : collab.statut === "termine"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-red-100 text-red-700"
+                              }`}
+                            >
+                              {collab.statut === "en_cours"
+                                ? "En cours"
+                                : collab.statut === "termine"
+                                ? "Terminé"
+                                : "Annulé"}
+                            </span>
+                            {collab.contenu && (
+                              <span className="text-xs text-black/60 truncate">{collab.contenu}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                     {collaborations.length > 5 && (
                       <div className="text-center pt-4">
                         <Button
@@ -853,8 +1164,8 @@ export default function CreatorProfilePage() {
         {/* Onglet Planning */}
         {activeTab === "planning" && (
           <div>
-            <div className="mb-8">
-              <h2 className="text-3xl font-light text-black mb-2">Planning</h2>
+            <div className="mb-6 sm:mb-8">
+              <h2 className="text-2xl sm:text-3xl font-light text-black mb-2">Planning</h2>
               <p className="text-sm text-black/40 font-light">
                 Gérez les rendez-vous et collaborations de {creator.firstName}
               </p>
@@ -866,9 +1177,9 @@ export default function CreatorProfilePage() {
         {/* Onglet Collaborations */}
         {activeTab === "collaborations" && (
           <div>
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
               <div>
-                <h2 className="text-3xl font-light text-black mb-2">Collaborations</h2>
+                <h2 className="text-2xl sm:text-3xl font-light text-black mb-2">Collaborations</h2>
                 <p className="text-sm text-black/40 font-light">
                   Gérez les partenariats et campagnes de {creator.firstName}
                 </p>
@@ -952,8 +1263,8 @@ export default function CreatorProfilePage() {
 
             {/* Modal Ajout Collaboration */}
             {isAddingCollab && (
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-8">
-                <Card className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-8">
+                <Card className="bg-white rounded-3xl p-6 sm:p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-2xl font-light text-black">Nouvelle collaboration</h3>
                     <Button
@@ -1117,8 +1428,8 @@ export default function CreatorProfilePage() {
 
             {/* Modal Édition Collaboration */}
             {isEditingCollab && (
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-8">
-                <Card className="bg-white rounded-3xl p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-8">
+                <Card className="bg-white rounded-3xl p-6 sm:p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-2xl font-light text-black">Modifier la collaboration</h3>
                     <Button
@@ -1325,9 +1636,9 @@ export default function CreatorProfilePage() {
         {activeTab === "insights" && (
           <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-3xl font-light text-black mb-2">Insights détaillés</h2>
+                <h2 className="text-2xl sm:text-3xl font-light text-black mb-2">Insights détaillés</h2>
                 <p className="text-sm text-black/40 font-light">Statistiques des réseaux sociaux (édition manuelle)</p>
               </div>
               {!isEditingInsights ? (
@@ -1360,14 +1671,14 @@ export default function CreatorProfilePage() {
             </div>
 
             {/* Instagram Insights */}
-            <Card className="bg-white border border-black/5 rounded-3xl p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <Instagram className="w-6 h-6 text-black" />
-                <h3 className="text-2xl font-light text-black">Instagram</h3>
+            <Card className="bg-white border border-black/5 rounded-3xl p-6 sm:p-8">
+              <div className="flex items-center gap-3 mb-4 sm:mb-6">
+                <Instagram className="w-5 h-5 sm:w-6 sm:h-6 text-black" />
+                <h3 className="text-xl sm:text-2xl font-light text-black">Instagram</h3>
               </div>
               
               {isEditingInsights ? (
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <Label className="text-black/80 font-light">Followers</Label>
                     <Input
@@ -1406,7 +1717,7 @@ export default function CreatorProfilePage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                   <div className="p-6 bg-black/5 rounded-2xl">
                     <p className="text-sm text-black/40 font-light mb-2">Followers</p>
                     <p className="text-3xl font-light text-black mb-1">{insightsData.instagramFollowers || "-"}</p>
@@ -1428,14 +1739,14 @@ export default function CreatorProfilePage() {
             </Card>
 
             {/* TikTok Insights */}
-            <Card className="bg-white border border-black/5 rounded-3xl p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-6 h-6 bg-black rounded-lg"></div>
-                <h3 className="text-2xl font-light text-black">TikTok</h3>
+            <Card className="bg-white border border-black/5 rounded-3xl p-6 sm:p-8">
+              <div className="flex items-center gap-3 mb-4 sm:mb-6">
+                <div className="w-5 h-5 sm:w-6 sm:h-6 bg-black rounded-lg"></div>
+                <h3 className="text-xl sm:text-2xl font-light text-black">TikTok</h3>
               </div>
               
               {isEditingInsights ? (
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   <div>
                     <Label className="text-black/80 font-light">Followers</Label>
                     <Input
@@ -1465,32 +1776,32 @@ export default function CreatorProfilePage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-6">
-                  <div className="p-6 bg-black/5 rounded-2xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  <div className="p-4 sm:p-6 bg-black/5 rounded-2xl">
                     <p className="text-sm text-black/40 font-light mb-2">Followers</p>
-                    <p className="text-3xl font-light text-black mb-1">{insightsData.tiktokFollowers || "-"}</p>
+                    <p className="text-2xl sm:text-3xl font-light text-black mb-1">{insightsData.tiktokFollowers || "-"}</p>
                   </div>
-                  <div className="p-6 bg-black/5 rounded-2xl">
+                  <div className="p-4 sm:p-6 bg-black/5 rounded-2xl">
                     <p className="text-sm text-black/40 font-light mb-2">Engagement</p>
-                    <p className="text-3xl font-light text-black mb-1">{insightsData.tiktokEngagement || "-"}</p>
+                    <p className="text-2xl sm:text-3xl font-light text-black mb-1">{insightsData.tiktokEngagement || "-"}</p>
                   </div>
-                  <div className="p-6 bg-black/5 rounded-2xl">
+                  <div className="p-4 sm:p-6 bg-black/5 rounded-2xl">
                     <p className="text-sm text-black/40 font-light mb-2">Vues moyennes</p>
-                    <p className="text-3xl font-light text-black mb-1">{insightsData.tiktokViews || "-"}</p>
+                    <p className="text-2xl sm:text-3xl font-light text-black mb-1">{insightsData.tiktokViews || "-"}</p>
                   </div>
                 </div>
               )}
             </Card>
 
             {/* Snapchat Insights */}
-            <Card className="bg-white border border-black/5 rounded-3xl p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-6 h-6 bg-yellow-400 rounded-lg"></div>
-                <h3 className="text-2xl font-light text-black">Snapchat</h3>
+            <Card className="bg-white border border-black/5 rounded-3xl p-6 sm:p-8">
+              <div className="flex items-center gap-3 mb-4 sm:mb-6">
+                <div className="w-5 h-5 sm:w-6 sm:h-6 bg-yellow-400 rounded-lg"></div>
+                <h3 className="text-xl sm:text-2xl font-light text-black">Snapchat</h3>
               </div>
               
               {isEditingInsights ? (
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <Label className="text-black/80 font-light">Abonnés</Label>
                     <Input
@@ -1511,14 +1822,73 @@ export default function CreatorProfilePage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="p-6 bg-black/5 rounded-2xl">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="p-4 sm:p-6 bg-black/5 rounded-2xl">
                     <p className="text-sm text-black/40 font-light mb-2">Abonnés</p>
-                    <p className="text-3xl font-light text-black mb-1">{insightsData.snapchatFollowers || "-"}</p>
+                    <p className="text-2xl sm:text-3xl font-light text-black mb-1">{insightsData.snapchatFollowers || "-"}</p>
                   </div>
-                  <div className="p-6 bg-black/5 rounded-2xl">
+                  <div className="p-4 sm:p-6 bg-black/5 rounded-2xl">
                     <p className="text-sm text-black/40 font-light mb-2">Vues moyennes</p>
-                    <p className="text-3xl font-light text-black mb-1">{insightsData.snapchatViews || "-"}</p>
+                    <p className="text-2xl sm:text-3xl font-light text-black mb-1">{insightsData.snapchatViews || "-"}</p>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* YouTube Insights */}
+            <Card className="bg-white border border-black/5 rounded-3xl p-6 sm:p-8">
+              <div className="flex items-center gap-3 mb-4 sm:mb-6">
+                <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-600 rounded-lg flex items-center justify-center">
+                  <svg className="w-3 h-3 sm:w-4 sm:h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                  </svg>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-light text-black">YouTube</h3>
+              </div>
+              
+              {isEditingInsights ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  <div>
+                    <Label className="text-black/80 font-light">Abonnés</Label>
+                    <Input
+                      value={insightsData.youtubeSubscribers}
+                      onChange={(e) => setInsightsData({...insightsData, youtubeSubscribers: e.target.value})}
+                      placeholder="100K"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-black/80 font-light">Taux d'engagement</Label>
+                    <Input
+                      value={insightsData.youtubeEngagement}
+                      onChange={(e) => setInsightsData({...insightsData, youtubeEngagement: e.target.value})}
+                      placeholder="8%"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-black/80 font-light">Vues moyennes</Label>
+                    <Input
+                      value={insightsData.youtubeAvgViews}
+                      onChange={(e) => setInsightsData({...insightsData, youtubeAvgViews: e.target.value})}
+                      placeholder="50K"
+                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  <div className="p-4 sm:p-6 bg-black/5 rounded-2xl">
+                    <p className="text-sm text-black/40 font-light mb-2">Abonnés</p>
+                    <p className="text-2xl sm:text-3xl font-light text-black mb-1">{insightsData.youtubeSubscribers || "-"}</p>
+                  </div>
+                  <div className="p-4 sm:p-6 bg-black/5 rounded-2xl">
+                    <p className="text-sm text-black/40 font-light mb-2">Engagement</p>
+                    <p className="text-2xl sm:text-3xl font-light text-black mb-1">{insightsData.youtubeEngagement || "-"}</p>
+                  </div>
+                  <div className="p-4 sm:p-6 bg-black/5 rounded-2xl">
+                    <p className="text-sm text-black/40 font-light mb-2">Vues moyennes</p>
+                    <p className="text-2xl sm:text-3xl font-light text-black mb-1">{insightsData.youtubeAvgViews || "-"}</p>
                   </div>
                 </div>
               )}
@@ -1527,10 +1897,10 @@ export default function CreatorProfilePage() {
         )}
 
         {activeTab === "mediakit" && (
-          <Card className="bg-white border border-black/5 rounded-3xl p-10">
-            <div className="flex items-center justify-between mb-8">
+          <Card className="bg-white border border-black/5 rounded-3xl p-6 sm:p-10">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
               <div>
-                <h2 className="text-3xl font-light text-black mb-2">Kit Média</h2>
+                <h2 className="text-2xl sm:text-3xl font-light text-black mb-2">Kit Média</h2>
                 <p className="text-sm text-black/40 font-light">
                   Document PDF à destination des marques pour les négociations
                 </p>
@@ -1655,10 +2025,10 @@ export default function CreatorProfilePage() {
         )}
 
         {activeTab === "content" && (
-          <Card className="bg-white border border-black/5 rounded-3xl p-10">
-            <div className="flex items-center justify-between mb-8">
+          <Card className="bg-white border border-black/5 rounded-3xl p-6 sm:p-10">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
               <div>
-                <h2 className="text-3xl font-light text-black mb-2">Content Library</h2>
+                <h2 className="text-2xl sm:text-3xl font-light text-black mb-2">Content Library</h2>
                 <p className="text-sm text-black/40 font-light">Photos et contenus du talent</p>
               </div>
               <Button className="btn-accent rounded-full font-light">
@@ -1666,7 +2036,7 @@ export default function CreatorProfilePage() {
                 Upload
               </Button>
             </div>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                 <div key={i} className="aspect-square bg-black/5 rounded-2xl hover:bg-black/10 transition-colors cursor-pointer"></div>
               ))}
@@ -1675,24 +2045,129 @@ export default function CreatorProfilePage() {
         )}
 
         {activeTab === "documents" && (
-          <Card className="bg-white border border-black/5 rounded-3xl p-10">
-            <div className="flex items-center justify-between mb-8">
+          <Card className="bg-white border border-black/5 rounded-3xl p-6 sm:p-10">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
               <div>
-                <h2 className="text-3xl font-light text-black mb-2">Documents</h2>
-                <p className="text-sm text-black/40 font-light">Documents officiels du talent</p>
+                <h2 className="text-2xl sm:text-3xl font-light text-black mb-2">Documents</h2>
+                <p className="text-sm text-black/40 font-light">Documents officiels du talent (passeport, ID, contrats, etc.)</p>
               </div>
-              <Button className="btn-accent rounded-full font-light">
+              <div>
+                <input
+                  id="document-upload-input"
+                  type="file"
+                  accept=".pdf,image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+
+                    const docName = prompt("Nom du document (ex: Passeport, Carte d'identité, Contrat):", "");
+                    if (!docName || !docName.trim()) {
+                      alert("Veuillez saisir un nom pour le document");
+                      e.target.value = ""; // Reset input
+                      return;
+                    }
+
+                    setIsUploadingDocument(true);
+                    try {
+                      const reader = new FileReader();
+                      reader.onload = async (event) => {
+                        const fileUrl = event.target?.result as string;
+                        const newDoc = await createDocument({
+                          talentId: creatorId,
+                          name: docName.trim(),
+                          fileUrl,
+                        });
+                        setDocuments([...documents, newDoc]);
+                        alert("✅ Document uploadé avec succès !");
+                        e.target.value = ""; // Reset input for next upload
+                      };
+                      reader.readAsDataURL(file);
+                    } catch (error) {
+                      console.error("Erreur lors de l'upload du document:", error);
+                      alert("❌ Erreur lors de l'upload");
+                      e.target.value = ""; // Reset input
+                    } finally {
+                      setIsUploadingDocument(false);
+                    }
+                  }}
+                  className="hidden"
+                />
+                <Button 
+                  type="button"
+                  onClick={() => {
+                    document.getElementById('document-upload-input')?.click();
+                  }}
+                  className="btn-accent rounded-full font-light" 
+                  disabled={isUploadingDocument}
+                >
                 <Upload className="w-4 h-4 mr-2" />
-                Ajouter
+                  {isUploadingDocument ? "Upload en cours..." : "Ajouter un document"}
               </Button>
             </div>
+            </div>
+
             <div className="space-y-3">
-              <div className="p-6 bg-black/5 rounded-2xl flex items-center justify-center">
+              {documents.length > 0 ? (
+                documents.map((doc) => (
+                  <div key={doc.id} className="p-6 bg-black/5 rounded-2xl flex items-center justify-between hover:bg-black/10 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-black to-black/80 rounded-xl flex items-center justify-center">
+                        <FileText className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-black">{doc.name}</p>
+                        <p className="text-sm text-black/40 font-light">
+                          Uploadé le {new Date(doc.uploadedAt).toLocaleDateString('fr-FR')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <a
+                        href={doc.fileUrl}
+                        download={`${doc.name}.pdf`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-xl font-light border-black/10"
+                        >
+                          Télécharger
+                        </Button>
+                      </a>
+                      <Button
+                        onClick={async () => {
+                          if (confirm(`Supprimer "${doc.name}" ?`)) {
+                            try {
+                              await deleteDocument(doc.id);
+                              setDocuments(documents.filter(d => d.id !== doc.id));
+                              alert("✅ Document supprimé");
+                            } catch (error) {
+                              console.error("Erreur lors de la suppression:", error);
+                              alert("❌ Erreur lors de la suppression");
+                            }
+                          }
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="rounded-xl font-light border-red-200 text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-12 bg-black/5 rounded-2xl flex items-center justify-center">
                 <div className="text-center">
-                  <FileText className="w-12 h-12 text-black/20 mx-auto mb-3" />
-                  <p className="font-light text-black/40">Aucun document</p>
+                    <FileText className="w-16 h-16 text-black/20 mx-auto mb-4" />
+                    <p className="font-light text-black/40 mb-2">Aucun document</p>
+                    <p className="text-sm text-black/30 font-light">Cliquez sur "Ajouter un document" pour uploader</p>
                 </div>
               </div>
+              )}
             </div>
           </Card>
         )}
@@ -1700,22 +2175,22 @@ export default function CreatorProfilePage() {
         {activeTab === "info" && (
           <div className="space-y-6">
             {/* Header avec bouton Sauvegarder */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-3xl font-light text-black mb-2">Informations personnelles</h2>
+                <h2 className="text-2xl sm:text-3xl font-light text-black mb-2">Informations personnelles</h2>
                 <p className="text-sm text-black/40 font-light">Modifier les informations du talent</p>
               </div>
-              <Button onClick={handleSave} className="btn-accent rounded-full font-light">
+              <Button onClick={handleSave} className="btn-accent rounded-full font-light whitespace-nowrap">
                 <Save className="w-4 h-4 mr-2" />
-                Sauvegarder toutes les modifications
+                Sauvegarder
               </Button>
             </div>
 
             {/* Informations générales */}
-            <Card className="bg-white border border-black/5 rounded-3xl p-8">
-              <h3 className="text-xl font-light text-black mb-6">Informations générales</h3>
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
+            <Card className="bg-white border border-black/5 rounded-3xl p-6 sm:p-8">
+              <h3 className="text-lg sm:text-xl font-light text-black mb-4 sm:mb-6">Informations générales</h3>
+              <div className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-black/80 font-light">Prénom</Label>
                     <Input
@@ -1762,10 +2237,10 @@ export default function CreatorProfilePage() {
             </Card>
 
             {/* Informations physiques */}
-            <Card className="bg-white border border-black/5 rounded-3xl p-8">
-              <h3 className="text-xl font-light text-black mb-6">Informations physiques</h3>
-              <div className="space-y-6">
-                <div className="grid grid-cols-3 gap-4">
+            <Card className="bg-white border border-black/5 rounded-3xl p-6 sm:p-8">
+              <h3 className="text-lg sm:text-xl font-light text-black mb-4 sm:mb-6">Informations physiques</h3>
+              <div className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <Label className="text-black/80 font-light">Taille du haut</Label>
                     <Input
@@ -1808,9 +2283,9 @@ export default function CreatorProfilePage() {
             </Card>
 
             {/* Coordonnées */}
-            <Card className="bg-white border border-black/5 rounded-3xl p-8">
-              <h3 className="text-xl font-light text-black mb-6">Coordonnées</h3>
-              <div className="space-y-6">
+            <Card className="bg-white border border-black/5 rounded-3xl p-6 sm:p-8">
+              <h3 className="text-lg sm:text-xl font-light text-black mb-4 sm:mb-6">Coordonnées</h3>
+              <div className="space-y-4 sm:space-y-6">
                 <div>
                   <Label className="text-black/80 font-light">Adresse complète</Label>
                   <Input
@@ -1841,7 +2316,7 @@ export default function CreatorProfilePage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-black/80 font-light">Téléphone</Label>
                     <Input
@@ -1865,9 +2340,9 @@ export default function CreatorProfilePage() {
             </Card>
 
             {/* Réseaux sociaux */}
-            <Card className="bg-white border border-black/5 rounded-3xl p-8">
-              <h3 className="text-xl font-light text-black mb-6">Réseaux sociaux</h3>
-              <div className="space-y-6">
+            <Card className="bg-white border border-black/5 rounded-3xl p-6 sm:p-8">
+              <h3 className="text-lg sm:text-xl font-light text-black mb-4 sm:mb-6">Réseaux sociaux</h3>
+              <div className="space-y-4 sm:space-y-6">
                 <div>
                   <Label className="text-black/80 font-light flex items-center gap-2">
                     <Instagram className="w-4 h-4" />

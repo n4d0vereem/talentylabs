@@ -211,3 +211,6 @@ Pour des customisations avancées, consultez :
 **Customisable** : 100% personnalisable via CSS et TypeScript 🎨
 **Fonctionnel** : Toutes les features conservées 🚀
 
+
+
+
