@@ -337,7 +337,7 @@ export default function CreatorProfilePage() {
       if (publicationDate < today && collab.statut === "en_cours") {
         console.log(`🔄 Auto-update: ${collab.marque} → statut "terminé" (date passée)`);
         try {
-          await updateCollaborationAPI(talentId, collab.id, {
+          await updateCollaborationAPI(collab.id, {
             ...collab,
             statut: "termine"
           });
