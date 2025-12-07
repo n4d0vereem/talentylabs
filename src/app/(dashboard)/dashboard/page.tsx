@@ -142,20 +142,20 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fafaf9] p-8">
-      <div className="max-w-[1400px] mx-auto space-y-12">
+    <div className="min-h-screen bg-[#fafaf9] p-4 sm:p-6 lg:p-8">
+      <div className="max-w-[1400px] mx-auto space-y-8 sm:space-y-12">
         {/* Header minimaliste */}
-        <div className="flex items-end justify-between border-b border-black/5 pb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between border-b border-black/5 pb-6 sm:pb-8 gap-4 pl-12 sm:pl-0">
           <div>
-            <h1 className="text-5xl font-light tracking-tight text-black mb-3">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tight text-black mb-2 sm:mb-3">
               Hello {agencySettings?.name || "Agence"} 👋
             </h1>
-            <p className="text-base text-black/40 font-light">
+            <p className="text-sm sm:text-base text-black/40 font-light">
               {talents.length} talents{totalFollowers > 0 && ` · ${(totalFollowers / 1000).toFixed(0)}K reach`}
             </p>
           </div>
-          <Link href="/dashboard/creators">
-            <Button className="btn-accent h-12 px-8 rounded-full font-light text-sm">
+          <Link href="/dashboard/creators" className="w-full sm:w-auto">
+            <Button className="btn-accent h-12 px-8 rounded-full font-light text-sm w-full sm:w-auto whitespace-nowrap">
               <Plus className="w-4 h-4 mr-2" />
               Nouveau talent
             </Button>
@@ -163,20 +163,20 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats épurées */}
-        <div className="grid grid-cols-3 gap-6">
-          <div className="bg-white border border-black/5 rounded-2xl p-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+          <div className="bg-white border border-black/5 rounded-2xl p-6 sm:p-8">
             <p className="text-sm text-black/40 font-light mb-2">Talents actifs</p>
-            <p className="text-5xl font-light text-black">{talents.length}</p>
+            <p className="text-4xl sm:text-5xl font-light text-black">{talents.length}</p>
           </div>
-          <div className="bg-white border border-black/5 rounded-2xl p-8">
+          <div className="bg-white border border-black/5 rounded-2xl p-6 sm:p-8">
             <p className="text-sm text-black/40 font-light mb-2">Portée totale</p>
-            <p className="text-5xl font-light text-black">
+            <p className="text-4xl sm:text-5xl font-light text-black">
               {totalFollowers > 0 ? `${(totalFollowers / 1000).toFixed(0)}K` : '-'}
             </p>
           </div>
-          <div className="bg-white border border-black/5 rounded-2xl p-8">
+          <div className="bg-white border border-black/5 rounded-2xl p-6 sm:p-8">
             <p className="text-sm text-black/40 font-light mb-2">Engagement moyen</p>
-            <p className="text-5xl font-light text-black">
+            <p className="text-4xl sm:text-5xl font-light text-black">
               {avgEngagement > 0 ? `${avgEngagement.toFixed(1)}%` : '-'}
             </p>
           </div>

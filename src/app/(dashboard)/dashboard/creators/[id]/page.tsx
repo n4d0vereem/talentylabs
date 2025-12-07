@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { AvatarUpload } from "@/components/avatar-upload";
 import { useState, useEffect } from "react";
-import { getTalentById, updateTalent, getInsights, saveInsights, getMediaKit, saveMediaKit, deleteMediaKit, getCollaborations, createCollaboration, updateCollaboration as updateCollaborationAPI, deleteCollaboration as deleteCollaborationAPI, reorderCollaborations, getCategories, getDocuments, createDocument, deleteDocument, getTodos, createTodo, updateTodo, deleteTodo } from "@/lib/api-client";
+import { getTalentById, updateTalent, getInsights, saveInsights, getMediaKit, saveMediaKit, deleteMediaKit, getCollaborations, createCollaboration, updateCollaboration as updateCollaborationAPI, deleteCollaboration as deleteCollaborationAPI, reorderCollaborations, getCategories, getDocuments, createDocument, deleteDocument, getTodos, createTodo, updateTodo, deleteTodo, getCalendarEvents } from "@/lib/api-client";
 import { Card } from "@/components/ui/card";
 import { TalentCalendar } from "@/components/talent-calendar";
 import { useAgencyId } from "@/lib/temp-agency";
@@ -256,6 +256,23 @@ export default function CreatorProfilePage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
 
+  // State pour les calendar events
+  interface CalendarEvent {
+    id: string;
+    talentId: string;
+    title: string;
+    start: string;
+    end: string;
+    type: string;
+    description?: string;
+    location?: string;
+    document?: string;
+    photo?: string;
+    link?: string;
+  }
+
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+
   // Sensors pour le drag and drop avec press delay
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -291,6 +308,42 @@ export default function CreatorProfilePage() {
         console.error("Erreur lors de la sauvegarde de l'ordre:", error);
         // Revenir à l'ordre précédent en cas d'erreur
         setCollaborations(collaborations);
+      }
+    }
+  };
+
+  // Fonction pour auto-update le statut des collaborations passées
+  const autoUpdatePastCollaborations = async (collabs: Collaboration[], talentId: string) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (const collab of collabs) {
+      // Ignorer si pas de date de publication ou déjà terminé/annulé
+      if (!collab.datePublication || collab.statut === "termine" || collab.statut === "annule") {
+        continue;
+      }
+
+      // Parser la date
+      let publicationDate: Date;
+      if (collab.datePublication.includes('/')) {
+        const [day, month, year] = collab.datePublication.split('/');
+        publicationDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      } else {
+        publicationDate = new Date(collab.datePublication);
+      }
+      publicationDate.setHours(0, 0, 0, 0);
+
+      // Si la date est passée, mettre à jour le statut
+      if (publicationDate < today && collab.statut === "en_cours") {
+        console.log(`🔄 Auto-update: ${collab.marque} → statut "terminé" (date passée)`);
+        try {
+          await updateCollaborationAPI(talentId, collab.id, {
+            ...collab,
+            statut: "termine"
+          });
+        } catch (error) {
+          console.error(`Erreur lors de la mise à jour de ${collab.marque}:`, error);
+        }
       }
     }
   };
@@ -369,14 +422,24 @@ export default function CreatorProfilePage() {
           }
 
           // Charger le media kit via l'API
-          const mediakit = await getMediaKit(creatorId);
-          if (mediakit && mediakit.pdfUrl) {
-            setMediakitUrl(mediakit.pdfUrl);
+          try {
+            const mediakit = await getMediaKit(creatorId);
+            if (mediakit && mediakit.pdfUrl) {
+              setMediakitUrl(mediakit.pdfUrl);
+            }
+          } catch (error) {
+            console.warn("Media kit non trouvé (normal si pas encore créé):", error);
           }
 
           // Charger les collaborations via l'API
           const collabs = await getCollaborations(creatorId);
-          setCollaborations(collabs);
+          
+          // Auto-update des collaborations passées
+          await autoUpdatePastCollaborations(collabs, creatorId);
+          
+          // Recharger après mise à jour
+          const updatedCollabs = await getCollaborations(creatorId);
+          setCollaborations(updatedCollabs);
 
           // Charger les todos via l'API
           const todosData = await getTodos(creatorId);
@@ -385,6 +448,16 @@ export default function CreatorProfilePage() {
           // Charger les documents via l'API
           const docsData = await getDocuments(creatorId);
           setDocuments(docsData);
+
+          // Charger les événements du calendrier via l'API
+          try {
+            const events = await getCalendarEvents(creatorId);
+            console.log("📅 Événements chargés:", events);
+            setCalendarEvents(events || []);
+          } catch (error) {
+            console.error("Erreur lors du chargement des événements:", error);
+            setCalendarEvents([]);
+          }
         }
       } catch (error) {
         console.error("Erreur lors du chargement des données:", error);
@@ -618,6 +691,22 @@ export default function CreatorProfilePage() {
   const displayAvgLikes = insightsData.instagramAvgLikes || creator.instagramData?.avgLikes || "0";
   const displayGrowth = insightsData.instagramGrowth || "+0";
 
+  // Filtrer les événements futurs du calendrier pour "Événements à venir"
+  // Exclure PREVIEW et PUBLICATION qui restent dans l'onglet Planning
+  const upcomingEvents = calendarEvents.filter(event => {
+    // Exclure PREVIEW et PUBLICATION
+    if (event.type === "PREVIEW" || event.type === "PUBLICATION") {
+      return false;
+    }
+    
+    // Garder seulement les événements futurs
+    const eventStart = new Date(event.start);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    eventStart.setHours(0, 0, 0, 0);
+    return eventStart >= today;
+  }).sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+
   return (
     <div className="min-h-screen bg-[#fafaf9]">
       {/* Header */}
@@ -720,76 +809,71 @@ export default function CreatorProfilePage() {
                     </Button>
                   </div>
                   
-                  {/* Liste scrollable des collaborations */}
+                  {/* Liste scrollable des événements du planning */}
                   <div className="max-h-[400px] overflow-y-auto space-y-3 pr-2">
-                    {collaborations.length > 0 ? (
-                      collaborations.map((collab) => (
-                        <div
-                          key={collab.id}
-                          className={`rounded-2xl p-4 transition-colors cursor-pointer ${
-                            collab.statut === "termine"
-                              ? "bg-emerald-50/40 hover:bg-emerald-50/60"
-                              : "bg-black/5 hover:bg-black/10"
-                          }`}
-                          onClick={() => router.push(`/dashboard/creators/${creator.id}?tab=collaborations`)}
-                        >
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-black to-black/80 flex items-center justify-center flex-shrink-0">
-                                <span className="text-sm font-medium text-white">
-                                  {collab.marque.substring(0, 2).toUpperCase()}
-                                </span>
+                    {upcomingEvents.length > 0 ? (
+                      upcomingEvents.map((event) => {
+                        const eventTypeColors: Record<string, string> = {
+                          "RDV": "bg-blue-50 text-blue-600",
+                          "EVENT": "bg-purple-50 text-purple-600",
+                          "TOURNAGE": "bg-red-50 text-red-600"
+                        };
+                        const typeColor = eventTypeColors[event.type] || "bg-gray-50 text-gray-600";
+
+                        return (
+                          <div
+                            key={event.id}
+                            className="rounded-2xl p-4 transition-colors cursor-pointer bg-white border border-black/5 hover:bg-black/5"
+                            onClick={() => router.push(`/dashboard/creators/${creator.id}?tab=planning`)}
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3 flex-1">
+                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-black to-black/80 flex items-center justify-center flex-shrink-0">
+                                  <Calendar className="w-5 h-5 text-white" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-black truncate">{event.title}</p>
+                                  <p className="text-sm text-black/60">
+                                    {new Date(event.start).toLocaleDateString('fr-FR', { 
+                                      weekday: 'short', 
+                                      day: 'numeric', 
+                                      month: 'short' 
+                                    })}
+                                    {event.start !== event.end && ` - ${new Date(event.end).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`}
+                                  </p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="font-medium text-black">{collab.marque}</p>
-                                <p className="text-sm text-black/60">{collab.mois}</p>
+                              <div className="text-right">
+                                <p className="text-xs text-black/60">
+                                  {new Date(event.start).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                </p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="font-medium text-black">{parseFloat(collab.budget).toLocaleString('fr-FR')}€</p>
-                              {collab.datePublication && (
-                                <p className="text-xs text-black/40">{new Date(collab.datePublication).toLocaleDateString('fr-FR')}</p>
+                            
+                            {/* Badges et infos */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-xs px-2.5 py-1 rounded-lg font-medium whitespace-nowrap ${typeColor}`}>
+                                {event.type}
+                              </span>
+                              {event.location && (
+                                <span className="text-xs text-black/60 font-light flex items-center gap-1">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  </svg>
+                                  {event.location}
+                                </span>
                               )}
                             </div>
-                          </div>
-                          
-                          {/* Badges et infos */}
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                collab.type === "entrant"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-orange-100 text-orange-700"
-                              }`}
-                            >
-                              {collab.type === "entrant" ? "Entrant" : "Sortant"}
-                            </span>
-                            <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                collab.statut === "en_cours"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : collab.statut === "termine"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {collab.statut === "en_cours"
-                                ? "En cours"
-                                : collab.statut === "termine"
-                                ? "Terminé"
-                                : "Annulé"}
-                            </span>
-                            {collab.contenu && (
-                              <span className="text-xs text-black/60 font-light">
-                                {collab.contenu}
-                              </span>
+                            {event.description && (
+                              <p className="text-xs text-black/60 font-light mt-2 line-clamp-2">{event.description}</p>
                             )}
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     ) : (
                       <div className="text-center py-8">
-                        <p className="text-black/40 font-light">Aucune collaboration à venir</p>
+                        <p className="text-black/40 font-light">Aucun événement à venir dans le planning</p>
                       </div>
                     )}
                   </div>
@@ -984,15 +1068,15 @@ export default function CreatorProfilePage() {
             </div>
 
             {/* Campaigns Manager - Tableau en bas */}
-            <Card className="bg-white border border-black/5 rounded-3xl p-8 mt-6">
-              <div className="flex items-center justify-between mb-6">
+            <Card className="bg-white border border-black/5 rounded-3xl p-6 sm:p-8 lg:p-10 mt-8">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                 <div>
-                  <h3 className="text-2xl font-light text-black">Collaborations</h3>
-                  <p className="text-sm text-black/40 font-light">Suivi des campagnes et partenariats</p>
+                  <h3 className="text-2xl sm:text-3xl font-light text-black mb-1">Collaborations</h3>
+                  <p className="text-sm sm:text-base text-black/40 font-light">Suivi des campagnes et partenariats</p>
                 </div>
                 <Button
                   onClick={() => router.push(`/dashboard/creators/${creator.id}?tab=collaborations`)}
-                  className="btn-accent rounded-full font-light"
+                  className="btn-accent rounded-full font-light h-11 px-6 w-full sm:w-auto"
                 >
                   <Target className="w-4 h-4 mr-2" />
                   Voir tout
@@ -1000,12 +1084,12 @@ export default function CreatorProfilePage() {
               </div>
 
               {/* Tableau des collaborations */}
-              <div className="space-y-3">
+              <div className="space-y-6">
                 {collaborations.length > 0 ? (
                   <>
                     {/* Version Desktop - Grid */}
-                    <div className="hidden lg:block">
-                    <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs text-black/40 font-light uppercase">
+                    <div className="hidden lg:block space-y-4">
+                    <div className="grid grid-cols-12 gap-6 px-6 py-3 text-xs text-black/40 font-light uppercase border-b border-black/5">
                       <div className="col-span-3">Marque</div>
                       <div className="col-span-2">Mois</div>
                       <div className="col-span-2">Contenu</div>
@@ -1017,46 +1101,46 @@ export default function CreatorProfilePage() {
                     {collaborations.slice(0, 5).map((collab) => (
                       <div
                         key={collab.id}
-                        className={`rounded-2xl p-4 transition-colors cursor-pointer ${
+                        className={`rounded-2xl p-5 transition-all duration-200 cursor-pointer border ${
                           collab.statut === "termine"
-                            ? "bg-emerald-50/40 hover:bg-emerald-50/60"
-                            : "bg-black/5 hover:bg-black/10"
+                            ? "bg-emerald-50/40 hover:bg-emerald-50/60 border-emerald-100/50 hover:border-emerald-200"
+                            : "bg-white hover:bg-black/5 border-black/5 hover:border-black/10"
                         }`}
                         onClick={() => router.push(`/dashboard/creators/${creator.id}?tab=collaborations`)}
                       >
-                        <div className="grid grid-cols-12 gap-4 items-center">
+                        <div className="grid grid-cols-12 gap-6 items-center">
                           <div className="col-span-3">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-black to-black/80 flex items-center justify-center flex-shrink-0">
-                                <span className="text-xs font-medium text-white">
+                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-black to-black/80 flex items-center justify-center flex-shrink-0">
+                                <span className="text-sm font-medium text-white">
                                   {collab.marque.substring(0, 2).toUpperCase()}
                                 </span>
                               </div>
-                              <p className="font-light text-black">{collab.marque}</p>
+                              <p className="font-medium text-black">{collab.marque}</p>
                             </div>
                           </div>
-                          <div className="col-span-2 text-sm text-black/60">{collab.mois}</div>
-                          <div className="col-span-2 text-sm text-black/60 truncate">{collab.contenu || "-"}</div>
-                          <div className="col-span-2 text-sm font-medium text-black">{parseFloat(collab.budget).toLocaleString('fr-FR')}€</div>
-                          <div className="col-span-2">
+                          <div className="col-span-2 text-sm text-black/70 font-light">{collab.mois}</div>
+                          <div className="col-span-2 text-sm text-black/60 truncate font-light">{collab.contenu || "-"}</div>
+                          <div className="col-span-2 text-base font-semibold text-black">{parseFloat(collab.budget).toLocaleString('fr-FR')}€</div>
+                          <div className="col-span-2 flex items-center">
                             <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              className={`text-xs px-2.5 py-1 rounded-lg font-medium whitespace-nowrap ${
                                 collab.type === "entrant"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-orange-100 text-orange-700"
+                                  ? "bg-green-50 text-green-600"
+                                  : "bg-orange-50 text-orange-600"
                               }`}
                             >
                               {collab.type === "entrant" ? "Entrant" : "Sortant"}
                             </span>
                           </div>
-                          <div className="col-span-1">
+                          <div className="col-span-1 flex items-center">
                             <span
-                              className={`text-xs px-2 py-1 rounded-full ${
+                              className={`text-xs px-2.5 py-1 rounded-lg font-medium whitespace-nowrap ${
                                 collab.statut === "en_cours"
-                                  ? "bg-blue-100 text-blue-700"
+                                  ? "bg-blue-50 text-blue-600"
                                   : collab.statut === "termine"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-red-100 text-red-700"
+                                  ? "bg-green-50 text-green-600"
+                                  : "bg-red-50 text-red-600"
                               }`}
                             >
                               {collab.statut === "en_cours"
@@ -1072,51 +1156,51 @@ export default function CreatorProfilePage() {
                     </div>
 
                     {/* Version Mobile - Cards épurées */}
-                    <div className="lg:hidden space-y-3">
+                    <div className="lg:hidden space-y-5">
                       {collaborations.slice(0, 5).map((collab) => (
                         <div
                           key={collab.id}
-                          className={`rounded-2xl p-4 transition-colors cursor-pointer ${
+                          className={`rounded-2xl p-5 transition-all duration-200 cursor-pointer border ${
                             collab.statut === "termine"
-                              ? "bg-emerald-50/40 hover:bg-emerald-50/60"
-                              : "bg-black/5 hover:bg-black/10"
+                              ? "bg-emerald-50/40 hover:bg-emerald-50/60 border-emerald-100/50"
+                              : "bg-white hover:bg-black/5 border-black/5"
                           }`}
                           onClick={() => router.push(`/dashboard/creators/${creator.id}?tab=collaborations`)}
                         >
                           {/* Ligne 1: Marque + Budget */}
-                          <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-black to-black/80 flex items-center justify-center flex-shrink-0">
+                              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-black to-black/80 flex items-center justify-center flex-shrink-0">
                                 <span className="text-sm font-medium text-white">
                                   {collab.marque.substring(0, 2).toUpperCase()}
                                 </span>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium text-black truncate">{collab.marque}</p>
-                                <p className="text-xs text-black/60">{collab.mois}</p>
+                                <p className="font-semibold text-black truncate">{collab.marque}</p>
+                                <p className="text-sm text-black/60 font-light">{collab.mois}</p>
                               </div>
                             </div>
-                            <p className="text-lg font-medium text-black ml-3">{parseFloat(collab.budget).toLocaleString('fr-FR')}€</p>
+                            <p className="text-lg font-bold text-black ml-3">{parseFloat(collab.budget).toLocaleString('fr-FR')}€</p>
                           </div>
 
                           {/* Ligne 2: Badges Type + Statut */}
                           <div className="flex items-center gap-2 flex-wrap">
                             <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              className={`text-xs px-2.5 py-1 rounded-lg font-medium whitespace-nowrap ${
                                 collab.type === "entrant"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-orange-100 text-orange-700"
+                                  ? "bg-green-50 text-green-600"
+                                  : "bg-orange-50 text-orange-600"
                               }`}
                             >
                               {collab.type === "entrant" ? "Entrant" : "Sortant"}
                             </span>
                             <span
-                              className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              className={`text-xs px-2.5 py-1 rounded-lg font-medium whitespace-nowrap ${
                                 collab.statut === "en_cours"
-                                  ? "bg-blue-100 text-blue-700"
+                                  ? "bg-blue-50 text-blue-600"
                                   : collab.statut === "termine"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-red-100 text-red-700"
+                                  ? "bg-green-50 text-green-600"
+                                  : "bg-red-50 text-red-600"
                               }`}
                             >
                               {collab.statut === "en_cours"

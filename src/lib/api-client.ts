@@ -274,7 +274,13 @@ export async function saveInsights(data: any) {
 
 export async function getMediaKit(talentId: string) {
   const res = await fetch(`${API_BASE}/mediakit?talentId=${talentId}`, { credentials: "include" });
-  if (!res.ok) throw new Error("Failed to fetch media kit");
+  if (!res.ok) {
+    if (res.status === 404) {
+      // Pas de media kit trouvé → retourner null au lieu de lancer une erreur
+      return null;
+    }
+    throw new Error("Failed to fetch media kit");
+  }
   return res.json();
 }
 
@@ -422,6 +428,36 @@ export async function createUserAgency(data: { name: string; logo?: string; prim
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("Failed to create agency");
+  return res.json();
+}
+
+// ============================================
+// CALENDAR EVENTS
+// ============================================
+
+export async function getCalendarEvents(talentId: string) {
+  const res = await fetch(`${API_BASE}/calendar?talentId=${talentId}`, { credentials: "include" });
+  if (!res.ok) throw new Error("Failed to fetch calendar events");
+  return res.json();
+}
+
+export async function createCalendarEvent(data: any) {
+  const res = await fetch(`${API_BASE}/calendar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create calendar event");
+  return res.json();
+}
+
+export async function deleteCalendarEvent(id: string) {
+  const res = await fetch(`${API_BASE}/calendar?id=${id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to delete calendar event");
   return res.json();
 }
 
