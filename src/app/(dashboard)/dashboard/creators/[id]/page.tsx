@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 
 export const dynamic = 'force-dynamic';
 import { Label } from "@/components/ui/label";
-import { Instagram, Phone, FileText, Image, Edit, Save, X, Footprints, TrendingUp, DollarSign, Target, Upload, Users, Heart, Eye, Calendar, Plus, Trash2, Briefcase, Archive } from "lucide-react";
+import { Instagram, Phone, FileText, Image, Edit, Save, X, Footprints, TrendingUp, DollarSign, Target, Upload, Users, Heart, Eye, Calendar, Plus, Trash2, Briefcase } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { AvatarUpload } from "@/components/avatar-upload";
@@ -175,9 +175,10 @@ interface SortableTodoItemProps {
   };
   onToggle: (id: string, completed: boolean) => void;
   onArchive: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
-function SortableTodoItem({ todo, onToggle, onArchive }: SortableTodoItemProps) {
+function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoItemProps) {
   const {
     attributes,
     listeners,
@@ -185,27 +186,45 @@ function SortableTodoItem({ todo, onToggle, onArchive }: SortableTodoItemProps) 
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: todo.id });
+  } = useSortable({ 
+    id: todo.id,
+    disabled: todo.completed // Désactiver le drag pour les tâches complétées
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    cursor: 'grab',
-  };
+    transition: transition || 'transform 200ms ease',
+    opacity: isDragging ? 0.7 : 1,
+    zIndex: isDragging ? 999 : 'auto',
+    position: isDragging ? 'relative' : 'static',
+  } as React.CSSProperties;
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
       className={`group flex items-start gap-3 p-4 rounded-2xl transition-all ${
         todo.completed 
           ? "bg-gray-100" 
           : "bg-black/5 hover:bg-black/10"
-      }`}
+      } ${isDragging ? 'shadow-lg' : ''}`}
     >
+      <div 
+        {...attributes}
+        {...listeners}
+        className={`flex items-center justify-center ${todo.completed ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}`}
+      >
+        <div className="w-5 h-5 flex items-center justify-center text-black/30 hover:text-black/60">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="4" cy="4" r="1.5" fill="currentColor"/>
+            <circle cx="12" cy="4" r="1.5" fill="currentColor"/>
+            <circle cx="4" cy="8" r="1.5" fill="currentColor"/>
+            <circle cx="12" cy="8" r="1.5" fill="currentColor"/>
+            <circle cx="4" cy="12" r="1.5" fill="currentColor"/>
+            <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+          </svg>
+        </div>
+      </div>
       <input
         type="checkbox"
         checked={todo.completed}
@@ -214,10 +233,10 @@ function SortableTodoItem({ todo, onToggle, onArchive }: SortableTodoItemProps) 
           onToggle(todo.id, !todo.completed);
         }}
         onClick={(e) => e.stopPropagation()}
-        className="mt-1 rounded border-black/20 cursor-pointer"
+        className="mt-1 rounded border-black/20 cursor-pointer shrink-0"
       />
-      <div className="flex-1">
-        <p className={`text-sm font-light ${
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm font-light break-words ${
           todo.completed 
             ? "text-gray-400 line-through" 
             : "text-black"
@@ -232,17 +251,30 @@ function SortableTodoItem({ todo, onToggle, onArchive }: SortableTodoItemProps) 
           </p>
         )}
       </div>
-      <Button
-        onClick={(e) => {
-          e.stopPropagation();
-          onArchive(todo.id);
-        }}
-        variant="ghost"
-        size="sm"
-        className="opacity-0 group-hover:opacity-100 transition-opacity rounded-full hover:bg-red-100"
-      >
-        <Archive className="w-4 h-4 text-red-600" />
-      </Button>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            onArchive(todo.id);
+          }}
+          variant="ghost"
+          size="sm"
+          className="h-8 px-3 rounded-lg hover:bg-black/5 text-xs text-black/60 hover:text-black"
+        >
+          Archiver
+        </Button>
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(todo.id);
+          }}
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0 rounded-lg hover:bg-red-50 text-red-600 hidden sm:flex items-center justify-center"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
     </div>
   );
 }
@@ -401,29 +433,30 @@ export default function CreatorProfilePage() {
   const handleTodoDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (over && active.id !== over.id) {
-      const activeTodos = todos.filter(t => !t.archived && !t.completed);
-      const oldIndex = activeTodos.findIndex((t) => t.id === active.id);
-      const newIndex = activeTodos.findIndex((t) => t.id === over.id);
+    if (!over || active.id === over.id) return;
 
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newActiveTodos = arrayMove(activeTodos, oldIndex, newIndex);
-        
-        // Recombiner avec les todos archivés/complétés
-        const archivedCompleted = todos.filter(t => t.archived || t.completed);
-        const newTodos = [...newActiveTodos, ...archivedCompleted];
-        
-        setTodos(newTodos);
+    const activeTodos = todos.filter(t => !t.archived && !t.completed);
+    const oldIndex = activeTodos.findIndex((t) => t.id === active.id);
+    const newIndex = activeTodos.findIndex((t) => t.id === over.id);
 
-        // Sauvegarder le nouvel ordre dans la base de données
-        try {
-          await reorderTodos(creator.id, newTodos);
-        } catch (error) {
-          console.error("Erreur lors de la sauvegarde de l'ordre des todos:", error);
-          // Revenir à l'ordre précédent en cas d'erreur
-          setTodos(todos);
-        }
-      }
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Réordonner uniquement les todos actifs
+    const newActiveTodos = arrayMove(activeTodos, oldIndex, newIndex);
+    
+    // Recombiner avec les todos complétés et archivés (ils gardent leur position)
+    const completedTodos = todos.filter(t => t.completed && !t.archived);
+    const archivedTodos = todos.filter(t => t.archived);
+    const newTodos = [...newActiveTodos, ...completedTodos, ...archivedTodos];
+    
+    setTodos(newTodos);
+
+    // Sauvegarder le nouvel ordre dans la base de données
+    try {
+      await reorderTodos(creator.id, newTodos);
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde de l'ordre des todos:", error);
+      setTodos(todos); // Rollback en cas d'erreur
     }
   };
 
@@ -538,9 +571,9 @@ export default function CreatorProfilePage() {
 
           // Charger le media kit via l'API
           try {
-            const mediakit = await getMediaKit(creatorId);
-            if (mediakit && mediakit.pdfUrl) {
-              setMediakitUrl(mediakit.pdfUrl);
+          const mediakit = await getMediaKit(creatorId);
+          if (mediakit && mediakit.pdfUrl) {
+            setMediakitUrl(mediakit.pdfUrl);
             }
           } catch (error) {
             console.warn("Media kit non trouvé (normal si pas encore créé):", error);
@@ -1098,10 +1131,10 @@ export default function CreatorProfilePage() {
                   onDragEnd={handleTodoDragEnd}
                 >
                   <SortableContext
-                    items={todos.filter(t => !t.archived).map(t => t.id)}
+                    items={todos.filter(t => !t.archived && !t.completed).map(t => t.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <div className="space-y-2 mb-4">
+                    <div className="space-y-3 mb-4">
                       {todos.filter(t => !t.archived).length > 0 ? (
                         todos.filter(t => !t.archived).map((todo) => (
                           <SortableTodoItem
@@ -1125,6 +1158,16 @@ export default function CreatorProfilePage() {
                                 ));
                               } catch (error) {
                                 console.error("Erreur lors de l'archivage du todo:", error);
+                              }
+                            }}
+                            onDelete={async (id) => {
+                              if (confirm('Êtes-vous sûr de vouloir supprimer cette tâche ?')) {
+                                try {
+                                  await deleteTodo(id);
+                                  setTodos(todos.filter(t => t.id !== id));
+                                } catch (error) {
+                                  console.error("Erreur lors de la suppression du todo:", error);
+                                }
                               }
                             }}
                           />
