@@ -434,11 +434,13 @@ export default function CreatorProfilePage() {
     setTodos(newTodos);
 
     // Sauvegarder le nouvel ordre dans la base de données
-    try {
-      await reorderTodos(creator.id, newTodos);
-    } catch (error) {
-      console.error("Erreur lors de la sauvegarde de l'ordre des todos:", error);
-      setTodos(todos); // Rollback en cas d'erreur
+    if (creator) {
+      try {
+        await reorderTodos(creator.id, newTodos);
+      } catch (error) {
+        console.error("Erreur lors de la sauvegarde de l'ordre des todos:", error);
+        setTodos(todos); // Rollback en cas d'erreur
+      }
     }
   };
 
