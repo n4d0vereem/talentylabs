@@ -217,9 +217,9 @@ function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoI
           e.stopPropagation();
           onDelete(todo.id);
         }}
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 rounded-full hover:bg-black/10 flex items-center justify-center text-black/40 hover:text-red-600 hidden sm:flex"
+        className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full hover:bg-red-50 flex items-center justify-center text-black/30 hover:text-red-600 transition-all opacity-0 group-hover:opacity-100 pointer-events-auto hidden sm:flex"
       >
-        <X className="w-4 h-4" />
+        <X className="w-3.5 h-3.5" />
       </button>
       
       <input
