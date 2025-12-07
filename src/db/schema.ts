@@ -222,6 +222,7 @@ export const talentTodos = pgTable("talent_todos", {
   deadline: text("deadline"), // Format: YYYY-MM-DD
   completed: boolean("completed").default(false).notNull(),
   archived: boolean("archived").default(false).notNull(),
+  displayOrder: integer("display_order").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

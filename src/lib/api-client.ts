@@ -379,6 +379,17 @@ export async function deleteTodo(todoId: string) {
   return res.json();
 }
 
+export async function reorderTodos(talentId: string, todos: any[]) {
+  const res = await fetch(`${API_BASE}/todos`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ talentId, todos }),
+  });
+  if (!res.ok) throw new Error("Failed to reorder todos");
+  return res.json();
+}
+
 // ============================================
 // USER PROFILE
 // ============================================

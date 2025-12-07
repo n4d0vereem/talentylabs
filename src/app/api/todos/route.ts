@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { talentTodos } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 
 // GET all todos for a talent
 export async function GET(request: NextRequest) {
@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
     const todos = await db
       .select()
       .from(talentTodos)
-      .where(eq(talentTodos.talentId, talentId));
+      .where(eq(talentTodos.talentId, talentId))
+      .orderBy(asc(talentTodos.displayOrder));
 
     return NextResponse.json(todos);
   } catch (error) {
@@ -44,6 +45,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get count of existing todos to set displayOrder
+    const existingTodos = await db
+      .select()
+      .from(talentTodos)
+      .where(eq(talentTodos.talentId, talentId));
+
     const newTodo = await db
       .insert(talentTodos)
       .values({
@@ -53,6 +60,7 @@ export async function POST(request: NextRequest) {
         deadline: deadline || null,
         completed: false,
         archived: false,
+        displayOrder: existingTodos.length,
         createdAt: new Date(),
         updatedAt: new Date(),
       })
@@ -96,6 +104,37 @@ export async function PATCH(request: NextRequest) {
     console.error("Error updating todo:", error);
     return NextResponse.json(
       { error: "Failed to update todo" },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT reorder todos
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { talentId, todos } = body;
+
+    if (!talentId || !todos || !Array.isArray(todos)) {
+      return NextResponse.json(
+        { error: "talentId and todos array are required" },
+        { status: 400 }
+      );
+    }
+
+    // Update display order for each todo
+    for (const [index, todo] of todos.entries()) {
+      await db
+        .update(talentTodos)
+        .set({ displayOrder: index, updatedAt: new Date() })
+        .where(eq(talentTodos.id, todo.id));
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error reordering todos:", error);
+    return NextResponse.json(
+      { error: "Failed to reorder todos" },
       { status: 500 }
     );
   }
