@@ -205,7 +205,7 @@ function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoI
       style={style}
       {...attributes}
       {...listeners}
-      className={`group relative flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-2xl transition-all ${
+      className={`group relative flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-2xl transition-all overflow-hidden ${
         todo.completed 
           ? "bg-gray-100 cursor-default" 
           : "bg-black/5 hover:bg-black/10 cursor-grab active:cursor-grabbing"
@@ -219,10 +219,10 @@ function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoI
           onToggle(todo.id, !todo.completed);
         }}
         onClick={(e) => e.stopPropagation()}
-        className="mt-0.5 sm:mt-1 rounded border-black/20 cursor-pointer shrink-0 w-4 h-4"
+        className="mt-0.5 sm:mt-1 rounded border-black/20 cursor-pointer flex-shrink-0 w-4 h-4"
       />
-      <div className="flex-1 min-w-0 overflow-hidden">
-        <p className={`text-xs sm:text-sm font-light break-words ${
+      <div className="flex-1 min-w-0 overflow-hidden pr-2">
+        <p className={`text-xs sm:text-sm font-light break-words overflow-wrap-anywhere ${
           todo.completed 
             ? "text-gray-400 line-through" 
             : "text-black"
@@ -238,7 +238,7 @@ function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoI
         )}
       </div>
       {/* Desktop uniquement: boutons au hover */}
-      <div className="hidden sm:flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+      <div className="hidden sm:flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -927,46 +927,20 @@ export default function CreatorProfilePage() {
                     setLongPressTimer(null);
                   }
                 }}
-                className="relative"
+                className="relative group"
               >
-                {/* Liseret statique avec petits points indicateurs */}
+                {/* Indicateur subtil au hover/touch pour sélecteur de talents */}
                 {allTalents.length > 0 && (
-                  <div className="absolute inset-0 -m-2">
-                    {/* Cercle extérieur avec gap */}
-                    <svg className="w-full h-full" viewBox="0 0 100 100">
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="48"
-                        fill="none"
-                        stroke="#000000"
-                        strokeWidth="1"
-                        strokeDasharray="4 4"
-                        opacity="0.15"
-                      />
-                      {/* Petits points directionnels */}
-                      <circle cx="50" cy="8" r="2" fill="#000000" opacity="0.3" />
-                      <circle cx="50" cy="92" r="2" fill="#000000" opacity="0.3" />
-                      <circle cx="8" cy="50" r="2" fill="#000000" opacity="0.3" />
-                      <circle cx="92" cy="50" r="2" fill="#000000" opacity="0.3" />
-                    </svg>
-                  </div>
+                  <div className="absolute inset-0 -m-1.5 rounded-full border border-black/5 group-active:border-black/20 transition-colors" />
                 )}
                 
-                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-2 border-black/10 flex-shrink-0 relative z-10">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-2 border-black/10 flex-shrink-0 relative shadow-sm">
                   <img 
                     src={creatorImage} 
                     alt={`${creator.firstName} ${creator.lastName}`}
                     className="w-full h-full object-cover"
                   />
                 </div>
-                
-                {/* Badge indicateur minimaliste */}
-                {allTalents.length > 0 && (
-                  <div className="absolute -bottom-1 -right-1 bg-black text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-light border-2 border-white">
-                    {allTalents.length}
-                  </div>
-                )}
               </button>
 
               {/* Menu sélecteur de talents */}

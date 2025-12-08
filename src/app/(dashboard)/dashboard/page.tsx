@@ -247,8 +247,8 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#fafaf9] p-4 sm:p-6 lg:p-8">
       <div className="max-w-[1400px] mx-auto space-y-8 sm:space-y-12">
         {/* Header minimaliste */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between border-b border-black/5 pb-6 sm:pb-8 gap-4 pl-12 sm:pl-0">
-          <div>
+        <div className="flex flex-col items-center justify-center border-b border-black/5 pb-6 sm:pb-8 gap-6 relative">
+          <div className="text-center">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tight text-black mb-2 sm:mb-3">
               Hello {agencySettings?.name || "Agence"} 👋
             </h1>
@@ -256,11 +256,12 @@ export default function DashboardPage() {
               {talents.length} talents{totalFollowers > 0 && ` · ${(totalFollowers / 1000).toFixed(0)}K reach`}
             </p>
           </div>
-          <Link href="/dashboard/creators" className="w-full sm:w-auto">
-            <Button className="btn-accent h-12 px-8 rounded-full font-light text-sm w-full sm:w-auto whitespace-nowrap">
-              <Plus className="w-4 h-4 mr-2" />
-              Nouveau talent
-            </Button>
+          
+          {/* Bouton rond + pour ajouter un talent */}
+          <Link href="/dashboard/creators">
+            <button className="w-14 h-14 rounded-full bg-black text-white hover:bg-gray-800 flex items-center justify-center shadow-lg hover:shadow-xl transition-all group">
+              <Plus className="w-6 h-6 group-hover:scale-110 transition-transform" />
+            </button>
           </Link>
         </div>
 
