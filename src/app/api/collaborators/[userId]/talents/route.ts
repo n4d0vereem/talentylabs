@@ -21,7 +21,12 @@ export async function GET(
     const talentIds = assignments.map(a => a.talentId);
     
     // Récupérer les détails des talents
-    let talentsDetails = [];
+    let talentsDetails: Array<{
+      id: string;
+      firstName: string | null;
+      lastName: string | null;
+      image: string | null;
+    }> = [];
     if (talentIds.length > 0) {
       talentsDetails = await db.query.talents.findMany({
         where: inArray(talents.id, talentIds),
