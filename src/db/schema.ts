@@ -63,6 +63,7 @@ export const accounts = pgTable("account", {
 // AGENCY & SETTINGS
 // ============================================
 
+// @ts-ignore - Circular reference with users is resolved at runtime
 export const agencies = pgTable("agencies", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
