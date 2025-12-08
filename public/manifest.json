@@ -1,7 +1,7 @@
 {
-  "name": "Eidoles CRM - Talent Management",
-  "short_name": "Eidoles CRM",
-  "description": "Application de gestion des talents pour Eidoles Agency",
+  "name": "TalentyLabs - Talent Management",
+  "short_name": "TalentyLabs",
+  "description": "Application de gestion des talents pour TalentyLabs",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#fafaf9",
@@ -9,16 +9,22 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/icon-192.svg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-512.svg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
   "categories": ["business", "productivity"],

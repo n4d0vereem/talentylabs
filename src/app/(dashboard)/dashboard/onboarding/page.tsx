@@ -117,7 +117,7 @@ export default function OnboardingPage() {
               onChange={(e) =>
                 setFormData({ ...formData, agencyName: e.target.value })
               }
-              placeholder="Eidoles, Makers Studio..."
+              placeholder="TalentyLabs, Makers Studio..."
               className="h-14 rounded-xl border-black/10 bg-black/5 text-lg font-light"
               required
             />

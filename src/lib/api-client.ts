@@ -8,10 +8,13 @@ const API_BASE = "/api";
 // TALENTS
 // ============================================
 
-export async function getTalents(agencyId: string) {
-  const res = await fetch(`${API_BASE}/talents?agencyId=${agencyId}`, { credentials: "include" });
+export async function getTalents(agencyId?: string) {
+  // agencyId n'est plus nécessaire car l'API utilise la session
+  const res = await fetch(`${API_BASE}/talents`, { credentials: "include" });
   if (!res.ok) throw new Error("Failed to fetch talents");
-  return res.json();
+  const data = await res.json();
+  // L'API retourne maintenant { success: true, talents: [...] }
+  return data.talents || data; // Compatibilité avec l'ancien format
 }
 
 export async function getTalentById(id: string) {

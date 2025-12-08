@@ -1,4 +1,4 @@
-const CACHE_NAME = 'eidoles-crm-v1';
+const CACHE_NAME = 'talentylabs-crm-v1';
 const urlsToCache = [
   '/',
   '/dashboard',

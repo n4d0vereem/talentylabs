@@ -22,7 +22,7 @@ interface AgencySettings {
 export default function SettingsPage() {
   const { agencyId, isLoading: agencyLoading } = useAgencyId();
   const [settings, setSettings] = useState<AgencySettings>({
-    name: "Eidoles",
+    name: "TalentyLabs",
     logo: "",
     primaryColor: "#000000",
     useDefaultColors: true,
@@ -184,7 +184,7 @@ export default function SettingsPage() {
                 type="text"
                 value={settings.name}
                 onChange={(e) => setSettings({ ...settings, name: e.target.value })}
-                placeholder="Eidoles"
+                placeholder="TalentyLabs"
                 className="mt-2 h-12 rounded-xl border-black/10 bg-black/5 text-black placeholder:text-black/40 focus:border-black focus:ring-0"
               />
               <p className="text-xs text-black/40 font-light mt-2">

@@ -1,11 +1,11 @@
 "use client";
 
-import { useSession } from "@/lib/auth-client";
+import { useSession, signOut } from "@/lib/auth-client";
 import { Card } from "@/components/ui/card";
 
 export const dynamic = 'force-dynamic';
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, TrendingUp, Users, Target } from "lucide-react";
+import { Loader2, Plus, TrendingUp, Users, Target, Ban } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getTalents, getAgencySettings, getUserAgency } from "@/lib/api-client";
@@ -39,6 +39,8 @@ export default function DashboardPage() {
   const [avgEngagement, setAvgEngagement] = useState(0);
   const [agencySettings, setAgencySettings] = useState<AgencySettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasNoAgency, setHasNoAgency] = useState(false);
+  const [isDisabled, setIsDisabled] = useState(false);
 
   // Vérifier si l'utilisateur a une agence et charger les données
   useEffect(() => {
@@ -60,14 +62,43 @@ export default function DashboardPage() {
       try {
         setIsLoading(true);
         
+        // Vérifier le rôle et le statut de l'utilisateur AVANT tout le reste
+        const roleRes = await fetch('/api/user/role', { credentials: 'include' });
+        if (roleRes.ok) {
+          const roleData = await roleRes.json();
+          
+          // Vérifier si l'utilisateur est désactivé
+          if (roleData.status === 'DISABLED') {
+            console.log("User is DISABLED");
+            setIsDisabled(true);
+            setIsLoading(false);
+            return;
+          }
+          
+          // Si TALENT, rediriger vers sa page talent
+          if (roleData.role === 'TALENT') {
+            const talentsRes = await fetch('/api/talents', { credentials: 'include' });
+            if (talentsRes.ok) {
+              const talentsData = await talentsRes.json();
+              if (talentsData.success && talentsData.talents && talentsData.talents.length > 0) {
+                // Rediriger vers la page du premier (et unique) talent assigné
+                console.log("TALENT detected, redirecting to their talent page");
+                router.push(`/dashboard/creators/${talentsData.talents[0].id}`);
+                return;
+              }
+            }
+          }
+        }
+        
         // Vérifier si l'utilisateur a une agence
         const userAgencyResponse = await getUserAgency();
         console.log("Agency response:", userAgencyResponse);
         
         if (!userAgencyResponse?.agency) {
-          // Pas d'agence → rediriger vers onboarding
-          console.log("No agency, redirecting to onboarding");
-          router.push("/dashboard/onboarding");
+          // Pas d'agence → afficher un message (compte dissocié)
+          console.log("No agency found");
+          setHasNoAgency(true);
+          setIsLoading(false);
           return;
         }
 
@@ -79,9 +110,9 @@ export default function DashboardPage() {
         const settings = await getAgencySettings(userAgencyId);
         setAgencySettings(settings);
 
-        // Charger les talents
-        const loadedTalents = await getTalents(userAgencyId);
-        setTalents(loadedTalents);
+        // Charger les talents (filtrés automatiquement selon le rôle)
+        const loadedTalents = await getTalents();
+        setTalents(loadedTalents || []);
         
         // Calculer les stats
         let total = 0;
@@ -110,10 +141,9 @@ export default function DashboardPage() {
         // En cas d'erreur de session, rediriger vers sign-in
         if (error instanceof Error && error.message.includes("Unauthorized")) {
           router.push("/sign-in");
-        } else {
-          // Sinon, rediriger vers onboarding
-          router.push("/dashboard/onboarding");
         }
+        // NE PAS rediriger vers onboarding automatiquement !
+        // L'utilisateur peut avoir une agence mais juste avoir une erreur temporaire
       }
     };
 
@@ -137,6 +167,78 @@ export default function DashboardPage() {
     return (
       <div className="flex items-center justify-center h-screen bg-white">
         <Loader2 className="h-8 w-8 animate-spin text-black" />
+      </div>
+    );
+  }
+
+  // Si utilisateur désactivé
+  if (isDisabled) {
+    return (
+      <div className="min-h-screen bg-[#fafaf9] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-red-100 p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-red-50 flex items-center justify-center">
+            <Ban className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-light text-black mb-3">
+            Compte désactivé
+          </h2>
+          <p className="text-gray-600 font-light leading-relaxed mb-6">
+            Votre compte a été temporairement désactivé par l'administrateur de votre agence.
+          </p>
+          <p className="text-sm text-gray-500 font-light mb-6">
+            Vous ne pouvez plus accéder aux données de l'agence. Contactez votre administrateur pour plus d'informations ou pour réactiver votre accès.
+          </p>
+          <Button
+            onClick={() => {
+              signOut();
+              router.push('/sign-in');
+            }}
+            className="w-full bg-red-600 text-white hover:bg-red-700"
+          >
+            Se déconnecter
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Si pas d'agence associée
+  if (hasNoAgency) {
+    return (
+      <div className="min-h-screen bg-[#fafaf9] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-black/5 p-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-gray-100 flex items-center justify-center">
+            <Ban className="w-8 h-8 text-gray-400" />
+          </div>
+          <h2 className="text-2xl font-light text-black mb-3">
+            Aucune agence associée
+          </h2>
+          <p className="text-gray-600 font-light leading-relaxed mb-6">
+            Votre compte n'est actuellement associé à aucune agence. 
+            Vous avez peut-être été retiré d'une agence ou votre accès a été révoqué.
+          </p>
+          <p className="text-sm text-gray-500 font-light mb-6">
+            Contactez l'administrateur de votre agence pour être réinvité ou créez votre propre agence.
+          </p>
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={() => router.push('/dashboard/onboarding')}
+              className="w-full bg-black text-white hover:bg-gray-800"
+            >
+              Créer une agence
+            </Button>
+            <Button
+              onClick={() => {
+                signOut();
+                router.push('/sign-in');
+              }}
+              variant="outline"
+              className="w-full"
+            >
+              Se déconnecter
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }

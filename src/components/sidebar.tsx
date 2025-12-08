@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSession, signOut } from "@/lib/auth-client";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,28 +37,37 @@ import { Button } from "@/components/ui/button";
 import { getAgencySettings, type AgencySettings } from "@/lib/agency-settings";
 import { useSearchParams } from "next/navigation";
 
-const mainNavigation = [
-  {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    name: "Talents",
-    href: "/dashboard/creators",
-    icon: UserPlus,
-  },
-  {
-    name: "Collaborateurs",
-    href: "/dashboard/collaborators",
-    icon: Users,
-  },
-];
+// Navigation filtrée selon le rôle
+const getNavigationForRole = (role?: string) => {
+  const baseNav = [
+    {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: LayoutDashboard,
+      roles: ['ADMIN', 'TALENT_MANAGER'], // TALENT n'a pas accès au dashboard
+    },
+    {
+      name: "Talents",
+      href: "/dashboard/creators",
+      icon: UserPlus,
+      roles: ['ADMIN', 'TALENT_MANAGER'],
+    },
+    {
+      name: "Collaborateurs",
+      href: "/dashboard/collaborators",
+      icon: Users,
+      roles: ['ADMIN'], // Uniquement ADMIN
+    },
+  ];
+
+  return baseNav.filter(item => !role || item.roles.includes(role));
+};
 
 const settingsNavigation = {
   name: "Paramètres",
   href: "/dashboard/settings",
   icon: Settings,
+  roles: ['ADMIN'], // Uniquement ADMIN
 };
 
   const talentTabs = [
@@ -78,6 +88,15 @@ export function Sidebar() {
   const { data: session, isPending: isSessionPending } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [agencySettings, setAgencySettings] = useState<AgencySettings | null>(null);
+  
+  // Récupérer le rôle de l'utilisateur depuis l'API
+  const { role: userRole, loading: roleLoading } = useUserRole();
+  
+  // DEBUG: Log temporaire pour voir le rôle
+  console.log('🔐 User role dans sidebar:', userRole, 'Loading:', roleLoading);
+  
+  // Navigation filtrée selon le rôle
+  const mainNavigation = getNavigationForRole(userRole || undefined);
 
   // Détecter si on est sur la page d'onboarding
   const isOnboarding = pathname === "/dashboard/onboarding";
@@ -116,17 +135,15 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile menu button */}
-      <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-3 rounded-xl bg-white border border-black/10 shadow-sm"
-      >
-        {isMobileMenuOpen ? (
-          <X className="h-5 w-5 text-black" />
-        ) : (
+      {/* Mobile menu button - Always visible */}
+      {!isMobileMenuOpen && (
+        <button
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="lg:hidden fixed top-4 left-4 z-50 p-3 rounded-xl bg-white border border-black/10 shadow-lg"
+        >
           <Menu className="h-5 w-5 text-black" />
-        )}
-      </button>
+        </button>
+      )}
 
       {/* Sidebar */}
       <aside
@@ -180,14 +197,16 @@ export function Sidebar() {
             </div>
           ) : isTalentProfile ? (
             <>
-              {/* Bouton retour */}
-              <Link
-                href="/dashboard"
-                className="flex items-center gap-3 px-4 py-3 mb-4 rounded-xl text-sm font-light text-black/60 hover:bg-black/5 hover:text-black transition-all border border-black/10"
-              >
-                <ChevronLeft className="h-5 w-5" />
-                Retour au dashboard
-              </Link>
+              {/* Bouton retour (pas pour les TALENT) */}
+              {userRole !== 'TALENT' && (
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-3 px-4 py-3 mb-4 rounded-xl text-sm font-light text-black/60 hover:bg-black/5 hover:text-black transition-all border border-black/10"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                  Retour au dashboard
+                </Link>
+              )}
 
               {/* Onglets du talent */}
               {talentTabs.map((tab) => {
@@ -244,22 +263,24 @@ export function Sidebar() {
           )}
         </nav>
 
-        {/* Paramètres en bas */}
-        <div className="px-6 pb-4">
-          <Link
-            href={settingsNavigation.href}
-            onClick={() => setIsMobileMenuOpen(false)}
-            className={cn(
-              "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-light transition-all",
-              pathname === settingsNavigation.href
-                ? "bg-black text-white"
-                : "text-black/60 hover:bg-black/5 hover:text-black"
-            )}
-          >
-            <Settings className="h-5 w-5" />
-            {settingsNavigation.name}
-          </Link>
-        </div>
+        {/* Paramètres en bas (uniquement pour ADMIN) */}
+        {(!userRole || settingsNavigation.roles.includes(userRole)) && (
+          <div className="px-6 pb-4">
+            <Link
+              href={settingsNavigation.href}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-light transition-all",
+                pathname === settingsNavigation.href
+                  ? "bg-black text-white"
+                  : "text-black/60 hover:bg-black/5 hover:text-black"
+              )}
+            >
+              <Settings className="h-5 w-5" />
+              {settingsNavigation.name}
+            </Link>
+          </div>
+        )}
 
         {/* User profile avec menu déroulant */}
         <div className="p-6 pt-4 border-t border-black/5 relative">
@@ -267,7 +288,7 @@ export function Sidebar() {
             <DropdownMenuTrigger asChild>
               <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-black/5 hover:bg-black/10 transition-colors">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={session?.user?.image || ""} />
+                  {session?.user?.image && <AvatarImage src={session.user.image} />}
                   <AvatarFallback className="bg-black text-white font-light">
                     {isSessionPending ? (
                       "..."

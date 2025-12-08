@@ -20,9 +20,9 @@ export interface AgencySettings {
 
 const STORAGE_KEY = 'talentylabs_agency_settings';
 
-// Paramètres par défaut (Eidoles)
+// Paramètres par défaut (TalentyLabs)
 const defaultSettings: AgencySettings = {
-  name: "Eidoles",
+  name: "TalentyLabs",
   logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQsR1VIXKGXfimfGgz9qZwKSm6mMmXoRla5Dw&s",
   primaryColor: "#000000",
   secondaryColor: "#ff6b35", // Inutilisé mais garde pour compatibilité

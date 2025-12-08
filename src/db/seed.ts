@@ -51,7 +51,7 @@ async function seed() {
       // Créer l'agence par défaut
       await db.insert(agencies).values({
         id: TEMP_AGENCY_ID,
-        name: "Eidoles",
+        name: "TalentyLabs",
         logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQsR1VIXKGXfimfGgz9qZwKSm6mMmXoRla5Dw&s",
         primaryColor: "#000000",
         useDefaultColors: true,

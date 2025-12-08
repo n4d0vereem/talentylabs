@@ -55,7 +55,7 @@ export function PWAInstall() {
       <div className="bg-white border border-black/10 rounded-2xl p-6 shadow-lg">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h3 className="font-medium text-black mb-1">Installer Eidoles CRM</h3>
+            <h3 className="font-medium text-black mb-1">Installer TalentyLabs</h3>
             <p className="text-sm text-black/60 font-light">
               Accédez rapidement à l'app depuis votre écran d'accueil
             </p>

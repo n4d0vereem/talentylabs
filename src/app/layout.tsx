@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Eidoles CRM - Talent Management",
-  description: "Application de gestion des talents pour Eidoles Agency",
+  title: "TalentyLabs - Talent Management",
+  description: "Application de gestion des talents pour TalentyLabs",
   manifest: "/manifest.json",
   themeColor: "#000000",
   viewport: {
@@ -26,11 +26,14 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Eidoles CRM",
+    title: "TalentyLabs",
   },
   icons: {
-    icon: "/icon-192.png",
-    apple: "/icon-192.png",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icon.svg", type: "image/svg+xml", sizes: "any" }
+    ],
+    apple: "/apple-touch-icon.svg",
   },
 };
 
@@ -46,7 +49,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Eidoles CRM" />
+        <meta name="apple-mobile-web-app-title" content="TalentyLabs" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

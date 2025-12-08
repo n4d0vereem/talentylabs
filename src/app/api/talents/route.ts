@@ -1,31 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { talents } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
+import { requireAuth, getAccessibleTalentIds } from "@/lib/auth-middleware";
 
-// GET all talents
+// GET all talents (filtrés selon le rôle)
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const agencyId = searchParams.get("agencyId");
-
-    if (!agencyId) {
-      return NextResponse.json(
-        { error: "agencyId is required" },
-        { status: 400 }
-      );
+    const currentUser = await requireAuth(request);
+    
+    // Récupérer les IDs des talents accessibles selon le rôle
+    const accessibleTalentIds = await getAccessibleTalentIds(
+      currentUser.id,
+      currentUser.role,
+      currentUser.agencyId
+    );
+    
+    if (accessibleTalentIds.length === 0) {
+      return NextResponse.json({ success: true, talents: [] });
     }
-
+    
+    // Filtrer les talents
     const allTalents = await db
       .select()
       .from(talents)
-      .where(eq(talents.agencyId, agencyId));
+      .where(inArray(talents.id, accessibleTalentIds));
 
-    return NextResponse.json(allTalents);
-  } catch (error) {
+    return NextResponse.json({ success: true, talents: allTalents });
+  } catch (error: any) {
     console.error("Error fetching talents:", error);
     return NextResponse.json(
-      { error: "Failed to fetch talents" },
+      { success: false, error: error.message || "Failed to fetch talents" },
       { status: 500 }
     );
   }

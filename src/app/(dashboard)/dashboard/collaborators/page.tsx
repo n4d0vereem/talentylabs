@@ -1,447 +1,761 @@
-"use client";
+'use client';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-
-export const dynamic = 'force-dynamic';
-import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
-  getCollaborators,
-  addCollaborator,
-  updateCollaborator,
-  deleteCollaborator,
-  type Collaborator,
-  type CollaboratorRole,
-  type CollaboratorType,
-  type CollaboratorStatus,
-} from "@/lib/collaborators-storage";
-import { UserPlus, Mail, Phone, X, Edit, Trash2, Search } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Plus, Mail, CheckCircle, Ban, Clock, UserCheck, Trash2, XCircle, MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 
-const collaboratorSchema = z.object({
-  firstName: z.string().min(1, "Le prénom est requis"),
-  lastName: z.string().min(1, "Le nom est requis"),
-  email: z.string().email("Email invalide"),
-  phone: z.string().optional(),
-  role: z.string().min(1, "Le rôle est requis"),
-  type: z.string().min(1, "Le type est requis"),
-});
+interface Collaborator {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: string;
+  type?: string;
+  status: string;
+  lastLoginAt: string | null;
+  createdAt: string;
+  userId?: string; // ID du user associé pour les assignations
+  assignedTalents?: Array<{ id: string; firstName: string; lastName: string; image?: string }>;
+}
 
-type FormData = z.infer<typeof collaboratorSchema>;
+interface PendingInvitation {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  expiresAt: string;
+  invitedBy: { name: string; email: string };
+}
 
 export default function CollaboratorsPage() {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedCollaborators, setSelectedCollaborators] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<FormData>({
-    resolver: zodResolver(collaboratorSchema),
+  const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState({
+    email: '',
+    role: 'TALENT_MANAGER',
+    firstName: '',
+    lastName: '',
+    phone: '',
+    type: 'Interne' as 'Interne' | 'Freelance' | 'Prestataire',
+    talentId: '' // Pour assigner un talent spécifique si role === TALENT
   });
-
+  const [inviting, setInviting] = useState(false);
+  
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedCollaborator, setSelectedCollaborator] = useState<Collaborator | null>(null);
+  const [talents, setTalents] = useState<any[]>([]);
+  const [assignedTalentIds, setAssignedTalentIds] = useState<string[]>([]);
+  const [assigning, setAssigning] = useState(false);
+  
+  // 1. Charger les données
   useEffect(() => {
-    loadCollaborators();
+    async function loadData() {
+      await loadTalents();
+      await loadCollaborators();
+    }
+    loadData();
   }, []);
-
-  const loadCollaborators = () => {
-    setCollaborators(getCollaborators());
-  };
-
-  const onSubmit = (data: FormData) => {
-    addCollaborator({
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      phone: data.phone,
-      role: data.role as CollaboratorRole,
-      type: data.type as CollaboratorType,
-      status: "Actif",
-    });
-    loadCollaborators();
-    setIsAddModalOpen(false);
-    reset();
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm("Êtes-vous sûr de vouloir supprimer ce collaborateur ?")) {
-      deleteCollaborator(id);
-      loadCollaborators();
+  
+  async function loadTalents() {
+    try {
+      const res = await fetch('/api/talents');
+      const data = await res.json();
+      if (data.success) {
+        setTalents(data.talents || []);
+      }
+    } catch (err) {
+      console.error('Erreur chargement talents:', err);
     }
-  };
-
-  const handleToggleStatus = (id: string) => {
-    const collaborator = collaborators.find((c) => c.id === id);
-    if (collaborator) {
-      updateCollaborator(id, {
-        status: collaborator.status === "Actif" ? "Inactif" : "Actif",
+  }
+  
+  async function loadCollaborators() {
+    try {
+      const res = await fetch('/api/collaborators');
+      const data = await res.json();
+      
+      if (data.success) {
+        const collabs = data.collaborators || [];
+        
+        // Charger les talents assignés pour chaque collaborateur
+        const collabsWithTalents = await Promise.all(
+          collabs.map(async (collab: Collaborator) => {
+            if (collab.userId && collab.status === 'ACTIVE') {
+              try {
+                const talentsRes = await fetch(`/api/collaborators/${collab.userId}/talents`);
+                const talentsData = await talentsRes.json();
+                if (talentsData.success && talentsData.talents) {
+                  return { ...collab, assignedTalents: talentsData.talents };
+                }
+              } catch (err) {
+                console.error('Erreur chargement talents pour', collab.name, err);
+              }
+            }
+            return { ...collab, assignedTalents: [] };
+          })
+        );
+        
+        setCollaborators(collabsWithTalents);
+        setInvitations(data.invitations || []);
+      }
+    } catch (err) {
+      console.error('Erreur chargement collaborateurs:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+  
+  // 2. Inviter un collaborateur
+  async function handleInvite(e: React.FormEvent) {
+    e.preventDefault();
+    
+    // Validation : si TALENT, un talent doit être sélectionné
+    if (inviteForm.role === 'TALENT' && !inviteForm.talentId) {
+      alert('⚠️ Veuillez sélectionner un talent à assigner');
+      return;
+    }
+    
+    setInviting(true);
+    
+    try {
+      const res = await fetch('/api/collaborators/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inviteForm)
       });
-      loadCollaborators();
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        alert(`✅ Invitation envoyée à ${inviteForm.email} !`);
+        setInviteDialogOpen(false);
+        setInviteForm({ 
+          email: '', 
+          role: 'TALENT_MANAGER',
+          firstName: '',
+          lastName: '',
+          phone: '',
+          type: 'Interne',
+          talentId: ''
+        });
+        loadCollaborators();
+      } else {
+        alert(`❌ Erreur : ${data.error}`);
+      }
+    } catch (err) {
+      alert('❌ Erreur lors de l\'envoi de l\'invitation');
+    } finally {
+      setInviting(false);
     }
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedCollaborators.length === collaborators.length) {
-      setSelectedCollaborators([]);
-    } else {
-      setSelectedCollaborators(collaborators.map((c) => c.id));
+  }
+  
+  // 3. Ouvrir le dialogue d'assignation
+  async function handleOpenAssignDialog(collab: Collaborator) {
+    setSelectedCollaborator(collab);
+    
+    // Charger les talents déjà assignés
+    try {
+      const res = await fetch(`/api/collaborators/${collab.userId}/talents`);
+      const data = await res.json();
+      if (data.success) {
+        setAssignedTalentIds(data.talentIds || []);
+      }
+    } catch (err) {
+      console.error('Erreur chargement assignations:', err);
+      setAssignedTalentIds([]);
     }
-  };
-
-  const toggleSelect = (id: string) => {
-    setSelectedCollaborators((prev) =>
-      prev.includes(id) ? prev.filter((cId) => cId !== id) : [...prev, id]
+    
+    setAssignDialogOpen(true);
+  }
+  
+  // 4. Sauvegarder les assignations
+  async function handleSaveAssignments() {
+    if (!selectedCollaborator) return;
+    
+    setAssigning(true);
+    try {
+      const res = await fetch(`/api/collaborators/${selectedCollaborator.userId}/assign-talents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ talentIds: assignedTalentIds })
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        alert('✅ Talents assignés avec succès !');
+        setAssignDialogOpen(false);
+        // Recharger les collaborateurs pour mettre à jour l'affichage
+        await loadCollaborators();
+      } else {
+        alert(`❌ Erreur : ${data.error}`);
+      }
+    } catch (err) {
+      alert('❌ Erreur lors de l\'assignation');
+    } finally {
+      setAssigning(false);
+    }
+  }
+  
+  // 5. Toggle talent selection
+  function toggleTalentSelection(talentId: string) {
+    setAssignedTalentIds(prev =>
+      prev.includes(talentId)
+        ? prev.filter(id => id !== talentId)
+        : [...prev, talentId]
     );
-  };
-
-  const filteredCollaborators = collaborators.filter((c) => {
-    const query = searchQuery.toLowerCase();
+  }
+  
+  // 6. Désactiver un collaborateur
+  async function handleDisableCollaborator(userId: string) {
+    console.log('⚡ FONCTION APPELÉE - handleDisableCollaborator avec userId:', userId);
+    
+    // TEMPORAIRE : Pas de confirmation pour tester
+    // const shouldProceed = confirm('Voulez-vous vraiment désactiver ce collaborateur ?');
+    // console.log('🔔 Confirmation:', shouldProceed);
+    // if (!shouldProceed) return;
+    
+    try {
+      console.log('🔄 Désactivation du collaborateur:', userId);
+      const res = await fetch(`/api/collaborators/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'DISABLED' })
+      });
+      
+      console.log('📡 Réponse status:', res.status);
+      const data = await res.json();
+      console.log('📦 Réponse data:', data);
+      
+      if (data.success) {
+        alert('✅ Collaborateur désactivé');
+        await loadCollaborators();
+      } else {
+        alert(`❌ Erreur : ${data.error}`);
+      }
+    } catch (err) {
+      console.error('❌ Erreur désactivation:', err);
+      alert('❌ Erreur lors de la désactivation');
+    }
+  }
+  
+  // 7. Réactiver un collaborateur
+  async function handleEnableCollaborator(userId: string) {
+    try {
+      const res = await fetch(`/api/collaborators/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'ACTIVE' })
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        alert('✅ Collaborateur réactivé');
+        loadCollaborators();
+      } else {
+        alert(`❌ Erreur : ${data.error}`);
+      }
+    } catch (err) {
+      alert('❌ Erreur lors de la réactivation');
+    }
+  }
+  
+  // 8. Retirer un collaborateur de l'agence
+  async function handleDeleteCollaborator(userId: string) {
+    console.log('⚡ FONCTION APPELÉE - handleDeleteCollaborator avec userId:', userId);
+    
+    // TEMPORAIRE : Pas de confirmation pour tester
+    // const shouldProceed = confirm('⚠️ Retirer ce collaborateur de l\'agence ? Il ne perdra pas son compte mais n\'aura plus accès à vos données.');
+    // console.log('🔔 Confirmation:', shouldProceed);
+    // if (!shouldProceed) return;
+    
+    try {
+      console.log('🔄 Retrait du collaborateur:', userId);
+      const res = await fetch(`/api/collaborators/${userId}`, {
+        method: 'DELETE'
+      });
+      
+      console.log('📡 Réponse status:', res.status);
+      const data = await res.json();
+      console.log('📦 Réponse data:', data);
+      
+      if (data.success) {
+        alert('✅ Collaborateur retiré de l\'agence');
+        await loadCollaborators();
+      } else {
+        alert(`❌ Erreur : ${data.error}`);
+      }
+    } catch (err) {
+      console.error('❌ Erreur retrait:', err);
+      alert('❌ Erreur lors du retrait');
+    }
+  }
+  
+  if (loading) {
     return (
-      c.firstName.toLowerCase().includes(query) ||
-      c.lastName.toLowerCase().includes(query) ||
-      c.email.toLowerCase().includes(query) ||
-      c.role.toLowerCase().includes(query)
-    );
-  });
-
-  return (
-    <div className="min-h-screen bg-[#fafaf9]">
-      {/* Header */}
-      <div className="border-b border-black/5 bg-white px-8 py-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-light text-black">Collaborateurs</h1>
-            <p className="text-sm text-black/40 font-light mt-1">
-              Gérez votre équipe et leurs accès
-            </p>
-          </div>
-          <Button
-            onClick={() => setIsAddModalOpen(true)}
-            className="btn-accent rounded-full font-light"
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Ajouter un collaborateur
-          </Button>
+      <div className="p-8 max-w-7xl mx-auto">
+        <div className="animate-pulse space-y-4">
+          <div className="h-6 bg-gray-100 rounded w-1/4"></div>
+          <div className="h-4 bg-gray-100 rounded w-1/6"></div>
+          <div className="h-96 bg-gray-50 rounded-xl border border-gray-200"></div>
         </div>
       </div>
-
-      {/* Content */}
-      <div className="max-w-[1600px] mx-auto p-8">
-        <Card className="bg-white border border-black/5 rounded-3xl overflow-hidden">
-          {/* Toolbar */}
-          <div className="p-6 border-b border-black/5 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black/40" />
+    );
+  }
+  
+  return (
+    <div className="p-8 max-w-7xl mx-auto">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Collaborateurs</h1>
+          <p className="text-gray-500 mt-1 text-sm">Gérez les accès à votre agence</p>
+        </div>
+        
+        <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-black hover:bg-gray-800 text-white">
+              <Plus className="mr-2 h-4 w-4" />
+              Inviter un collaborateur
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Inviter un collaborateur</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleInvite} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName">Prénom *</Label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    value={inviteForm.firstName}
+                    onChange={(e) => setInviteForm({ ...inviteForm, firstName: e.target.value })}
+                    placeholder="Jean"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lastName">Nom *</Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    value={inviteForm.lastName}
+                    onChange={(e) => setInviteForm({ ...inviteForm, lastName: e.target.value })}
+                    placeholder="Dupont"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="email">Email *</Label>
                 <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Rechercher..."
-                  className="pl-10 h-10 rounded-xl border-black/10 bg-black/5 w-[300px]"
+                  id="email"
+                  type="email"
+                  value={inviteForm.email}
+                  onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                  placeholder="collaborateur@example.com"
+                  required
                 />
               </div>
-              {selectedCollaborators.length > 0 && (
-                <p className="text-sm text-black/60 font-light">
-                  {selectedCollaborators.length} sélectionné(s)
+              
+              <div>
+                <Label htmlFor="phone">Téléphone</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={inviteForm.phone}
+                  onChange={(e) => setInviteForm({ ...inviteForm, phone: e.target.value })}
+                  placeholder="+33 6 12 34 56 78"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="role">Rôle d'accès *</Label>
+                <select
+                  id="role"
+                  value={inviteForm.role}
+                  onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value, talentId: '' })}
+                  className="w-full border rounded-md px-3 py-2"
+                >
+                  <option value="TALENT_MANAGER">Talent Manager</option>
+                  <option value="TALENT">Talent (Accès propre page uniquement)</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {inviteForm.role === 'TALENT_MANAGER' 
+                    ? '✓ Peut gérer plusieurs talents qui lui sont assignés' 
+                    : '✓ Peut voir uniquement SA page talent (assignation obligatoire)'}
                 </p>
+              </div>
+              
+              {/* Sélection du talent si rôle = TALENT */}
+              {inviteForm.role === 'TALENT' && (
+                <div className="border-l-4 border-blue-500 pl-4 bg-blue-50 p-3 rounded">
+                  <Label htmlFor="talentId" className="text-blue-900">Quel talent est-il ? *</Label>
+                  <select
+                    id="talentId"
+                    value={inviteForm.talentId}
+                    onChange={(e) => setInviteForm({ ...inviteForm, talentId: e.target.value })}
+                    className="w-full border rounded-md px-3 py-2 mt-2"
+                    required
+                  >
+                    <option value="">-- Sélectionner un talent --</option>
+                    {talents.map((talent) => (
+                      <option key={talent.id} value={talent.id}>
+                        {talent.firstName} {talent.lastName} {talent.category ? `(${talent.category})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-blue-700 mt-2 font-medium">
+                    ⚠️ Ce collaborateur sera automatiquement redirigé vers cette page talent lors de sa connexion.
+                  </p>
+                </div>
               )}
-            </div>
+              
+              <div>
+                <Label htmlFor="type">Type de collaborateur *</Label>
+                <select
+                  id="type"
+                  value={inviteForm.type}
+                  onChange={(e) => setInviteForm({ ...inviteForm, type: e.target.value as any })}
+                  className="w-full border rounded-md px-3 py-2"
+                >
+                  <option value="Interne">Interne</option>
+                  <option value="Freelance">Freelance</option>
+                  <option value="Prestataire">Prestataire</option>
+                </select>
+              </div>
+              
+              <Button type="submit" className="w-full" disabled={inviting}>
+                {inviting ? 'Envoi en cours...' : 'Envoyer l\'invitation'}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Dialogue d'assignation de talents */}
+        <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Assigner des talents à {selectedCollaborator?.name}</DialogTitle>
+            </DialogHeader>
+            
+            {talents.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                <p>Aucun talent disponible</p>
+                <p className="text-sm mt-2">Créez d'abord des talents depuis l'onglet Talents</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Sélectionnez les talents que {selectedCollaborator?.name} pourra gérer :
+                </p>
+                
+                <div className="space-y-2">
+                  {talents.map((talent) => (
+                    <label
+                      key={talent.id}
+                      className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={assignedTalentIds.includes(talent.id)}
+                        onChange={() => toggleTalentSelection(talent.id)}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      <div className="flex items-center gap-3 flex-1">
+                        {talent.image ? (
+                          <img
+                            src={talent.image}
+                            alt={`${talent.firstName} ${talent.lastName}`}
+                            className="h-10 w-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                            <span className="text-sm font-medium text-gray-600">
+                              {talent.firstName[0]}{talent.lastName[0]}
+                            </span>
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {talent.firstName} {talent.lastName}
+                          </p>
+                          {talent.category && (
+                            <p className="text-sm text-gray-500">{talent.category}</p>
+                          )}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <p className="text-sm text-gray-600">
+                    {assignedTalentIds.length} talent(s) sélectionné(s)
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setAssignDialogOpen(false)}
+                    >
+                      Annuler
+                    </Button>
+                    <Button
+                      onClick={handleSaveAssignments}
+                      disabled={assigning}
+                      className="bg-black hover:bg-gray-800 text-white"
+                    >
+                      {assigning ? 'Enregistrement...' : 'Enregistrer'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+      
+      {/* Invitations en attente */}
+      {invitations.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-medium text-gray-500 mb-3 uppercase tracking-wide">
+            Invitations en attente
+          </h2>
+          <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100">
+            {invitations.map((inv) => (
+              <div key={inv.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{inv.email}</p>
+                    <p className="text-sm text-gray-500">
+                      {inv.role === 'TALENT_MANAGER' ? 'Talent Manager' : 'Talent'} • 
+                      Expire le {new Date(inv.expiresAt).toLocaleDateString('fr-FR')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-
-          {/* Table */}
-          <div className="overflow-x-auto">
+        </div>
+      )}
+      
+      {/* Liste des collaborateurs */}
+      <div>
+        <h2 className="text-sm font-medium text-gray-500 mb-3 uppercase tracking-wide">
+          Équipe
+        </h2>
+        {collaborators.length === 0 ? (
+          <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
+            <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+              <Plus className="h-8 w-8 text-gray-400" />
+            </div>
+            <p className="text-gray-900 font-medium mb-1">Aucun collaborateur</p>
+            <p className="text-sm text-gray-500">Commencez par inviter votre premier collaborateur</p>
+          </div>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             <table className="w-full">
-              <thead className="border-b border-black/5">
-                <tr className="text-left">
-                  <th className="p-4 w-12">
-                    <input
-                      type="checkbox"
-                      checked={
-                        collaborators.length > 0 &&
-                        selectedCollaborators.length === collaborators.length
-                      }
-                      onChange={toggleSelectAll}
-                      className="w-4 h-4 rounded border-black/20"
-                    />
-                  </th>
-                  <th className="p-4 text-xs font-medium text-black/40 uppercase tracking-wide">
-                    Nom
-                  </th>
-                  <th className="p-4 text-xs font-medium text-black/40 uppercase tracking-wide">
-                    Rôle
-                  </th>
-                  <th className="p-4 text-xs font-medium text-black/40 uppercase tracking-wide">
-                    Type
-                  </th>
-                  <th className="p-4 text-xs font-medium text-black/40 uppercase tracking-wide">
-                    Email
-                  </th>
-                  <th className="p-4 text-xs font-medium text-black/40 uppercase tracking-wide">
-                    Téléphone
-                  </th>
-                  <th className="p-4 text-xs font-medium text-black/40 uppercase tracking-wide">
-                    Statut
-                  </th>
-                  <th className="p-4 text-xs font-medium text-black/40 uppercase tracking-wide">
-                    Date d'ajout
-                  </th>
-                  <th className="p-4 text-xs font-medium text-black/40 uppercase tracking-wide">
-                    Actions
-                  </th>
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
+                  <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                  <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Téléphone</th>
+                  <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Rôle</th>
+                  <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                  <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                  <th className="text-left p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Talents</th>
+                  <th className="text-right p-4 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {filteredCollaborators.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="p-12 text-center">
-                      <p className="text-black/40 font-light">
-                        {searchQuery
-                          ? "Aucun collaborateur trouvé"
-                          : "Aucun collaborateur pour le moment"}
-                      </p>
+              <tbody className="divide-y divide-gray-100">
+                {collaborators.map((collab) => (
+                  <tr key={collab.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                          <span className="text-sm font-medium text-gray-600">
+                            {collab.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="font-medium text-gray-900">{collab.name}</span>
+                      </div>
+                    </td>
+                    <td className="p-4 text-sm text-gray-600">{collab.email}</td>
+                    <td className="p-4 text-sm text-gray-600">{collab.phone || '—'}</td>
+                    <td className="p-4">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        {collab.role === 'TALENT_MANAGER' ? 'Talent Manager' : 
+                         collab.role === 'ADMIN' ? 'Admin' : 'Talent'}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200">
+                        {collab.type || 'Interne'}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      {collab.status === 'ACTIVE' ? (
+                        <span className="inline-flex items-center gap-1.5 text-sm text-gray-700">
+                          <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                          Actif
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-sm text-gray-500">
+                          <span className="h-2 w-2 rounded-full bg-gray-300"></span>
+                          Inactif
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      {collab.assignedTalents && collab.assignedTalents.length > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center -space-x-2">
+                            {collab.assignedTalents.slice(0, 3).map((talent, idx) => (
+                              <div
+                                key={talent.id}
+                                className="relative"
+                                title={`${talent.firstName} ${talent.lastName}`}
+                              >
+                                {talent.image ? (
+                                  <img
+                                    src={talent.image}
+                                    alt={`${talent.firstName} ${talent.lastName}`}
+                                    className="h-8 w-8 rounded-full object-cover border-2 border-white"
+                                  />
+                                ) : (
+                                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center border-2 border-white">
+                                    <span className="text-xs font-medium text-gray-600">
+                                      {talent.firstName[0]}{talent.lastName[0]}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            {collab.assignedTalents.length > 3 && (
+                              <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center border-2 border-white">
+                                <span className="text-xs font-medium text-gray-600">
+                                  +{collab.assignedTalents.length - 3}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          {collab.role === 'TALENT' && collab.assignedTalents.length === 1 && (
+                            <span className="text-sm" title="C'est son propre profil">⭐</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">
+                          {collab.role === 'TALENT' ? '⚠️ Non assigné' : 'Aucun'}
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {/* Bouton Gérer les talents (UNIQUEMENT pour TALENT_MANAGER actif) */}
+                        {collab.role === 'TALENT_MANAGER' && collab.status === 'ACTIVE' && collab.userId && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenAssignDialog(collab)}
+                            className="text-xs"
+                          >
+                            <UserCheck className="h-3 w-3 mr-1" />
+                            Gérer
+                          </Button>
+                        )}
+                        
+                        {/* Menu dropdown minimaliste */}
+                        {collab.userId && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 hover:bg-gray-100"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  console.log('Menu ouvert pour:', collab.name, 'userId:', collab.userId);
+                                }}
+                              >
+                                <MoreVertical className="h-4 w-4 text-gray-400" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                              {collab.status === 'ACTIVE' && (
+                                <DropdownMenuItem
+                                  onSelect={(e) => {
+                                    e.preventDefault();
+                                    console.log('🔴 Clic Désactiver pour userId:', collab.userId);
+                                    handleDisableCollaborator(collab.userId!);
+                                  }}
+                                  className="text-orange-600 cursor-pointer"
+                                >
+                                  <Ban className="h-3 w-3 mr-2" />
+                                  Désactiver
+                                </DropdownMenuItem>
+                              )}
+                              
+                              {collab.status === 'DISABLED' && (
+                                <DropdownMenuItem
+                                  onSelect={(e) => {
+                                    e.preventDefault();
+                                    console.log('🟢 Clic Réactiver pour userId:', collab.userId);
+                                    handleEnableCollaborator(collab.userId!);
+                                  }}
+                                  className="text-green-600 cursor-pointer"
+                                >
+                                  <CheckCircle className="h-3 w-3 mr-2" />
+                                  Réactiver
+                                </DropdownMenuItem>
+                              )}
+                              
+                              <DropdownMenuSeparator />
+                              
+                              <DropdownMenuItem
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  console.log('🗑️ Clic Retirer pour userId:', collab.userId);
+                                  handleDeleteCollaborator(collab.userId!);
+                                }}
+                                className="text-red-600 cursor-pointer"
+                              >
+                                <Trash2 className="h-3 w-3 mr-2" />
+                                Retirer
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
                     </td>
                   </tr>
-                ) : (
-                  filteredCollaborators.map((collaborator, index) => (
-                    <tr
-                      key={collaborator.id}
-                      className={`border-b border-black/5 hover:bg-black/5 transition-colors ${
-                        selectedCollaborators.includes(collaborator.id)
-                          ? "bg-yellow-50"
-                          : ""
-                      }`}
-                    >
-                      <td className="p-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedCollaborators.includes(
-                            collaborator.id
-                          )}
-                          onChange={() => toggleSelect(collaborator.id)}
-                          className="w-4 h-4 rounded border-black/20"
-                        />
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center text-black font-light">
-                            {collaborator.firstName[0]}
-                            {collaborator.lastName[0]}
-                          </div>
-                          <div>
-                            <p className="font-light text-black">
-                              {collaborator.firstName} {collaborator.lastName}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <p className="text-sm font-light text-black">
-                          {collaborator.role}
-                        </p>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-xs px-3 py-1 rounded-full bg-black/5 text-black/60 font-light">
-                          {collaborator.type}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2 text-sm text-black/60 font-light">
-                          <Mail className="w-4 h-4" />
-                          {collaborator.email}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <p className="text-sm text-black/60 font-light">
-                          {collaborator.phone || "-"}
-                        </p>
-                      </td>
-                      <td className="p-4">
-                        <button
-                          onClick={() => handleToggleStatus(collaborator.id)}
-                          className={`text-xs px-3 py-1 rounded-full font-light transition-colors ${
-                            collaborator.status === "Actif"
-                              ? "bg-green-100 text-green-700 hover:bg-green-200"
-                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                          }`}
-                        >
-                          {collaborator.status}
-                        </button>
-                      </td>
-                      <td className="p-4">
-                        <p className="text-sm text-black/60 font-light">
-                          {new Date(collaborator.addedAt).toLocaleDateString(
-                            "fr-FR"
-                          )}
-                        </p>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 hover:bg-black/5 rounded-lg"
-                            onClick={() => handleDelete(collaborator.id)}
-                          >
-                            <Trash2 className="w-4 h-4 text-black/40" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
-        </Card>
+        )}
       </div>
-
-      {/* Modal Ajouter Collaborateur */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-8">
-          <Card className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-3xl font-light text-black">
-                  Nouveau collaborateur
-                </h2>
-                <p className="text-sm text-black/40 font-light mt-1">
-                  Ajoutez un membre à votre équipe
-                </p>
-              </div>
-              <Button
-                onClick={() => {
-                  setIsAddModalOpen(false);
-                  reset();
-                }}
-                variant="ghost"
-                size="sm"
-                className="rounded-full"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Nom & Prénom */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-black/80 font-light">Prénom</Label>
-                  <Input
-                    {...register("firstName")}
-                    placeholder="Jean"
-                    className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
-                  />
-                  {errors.firstName && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {errors.firstName.message}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-black/80 font-light">Nom</Label>
-                  <Input
-                    {...register("lastName")}
-                    placeholder="Dupont"
-                    className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
-                  />
-                  {errors.lastName && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {errors.lastName.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Email & Téléphone */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-black/80 font-light">Email</Label>
-                  <Input
-                    {...register("email")}
-                    type="email"
-                    placeholder="jean@exemple.fr"
-                    className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
-                  />
-                  {errors.email && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {errors.email.message}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-black/80 font-light">Téléphone</Label>
-                  <Input
-                    {...register("phone")}
-                    placeholder="+33 6 12 34 56 78"
-                    className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
-                  />
-                </div>
-              </div>
-
-              {/* Rôle & Type */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-black/80 font-light">Rôle</Label>
-                  <select
-                    {...register("role")}
-                    className="mt-2 h-12 w-full rounded-xl border border-black/10 bg-black/5 px-4 text-black font-light"
-                  >
-                    <option value="">Sélectionner...</option>
-                    <option value="Talent Manager">Talent Manager</option>
-                    <option value="Commercial">Commercial</option>
-                    <option value="Responsable Paie">Responsable Paie</option>
-                    <option value="Responsable Communication">
-                      Responsable Communication
-                    </option>
-                    <option value="Assistant">Assistant</option>
-                    <option value="Directeur">Directeur</option>
-                  </select>
-                  {errors.role && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {errors.role.message}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-black/80 font-light">Type</Label>
-                  <select
-                    {...register("type")}
-                    className="mt-2 h-12 w-full rounded-xl border border-black/10 bg-black/5 px-4 text-black font-light"
-                  >
-                    <option value="">Sélectionner...</option>
-                    <option value="Interne">Interne</option>
-                    <option value="Freelance">Freelance</option>
-                    <option value="Prestataire">Prestataire</option>
-                  </select>
-                  {errors.type && (
-                    <p className="text-red-500 text-sm mt-1">
-                      {errors.type.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full btn-accent rounded-full font-light h-12"
-              >
-                Ajouter le collaborateur
-              </Button>
-            </form>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }
-
-
-

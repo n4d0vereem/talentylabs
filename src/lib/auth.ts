@@ -23,6 +23,25 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7, // 7 jours
     updateAge: 60 * 60 * 24, // Update toutes les 24h
   },
+  user: {
+    // Ajouter les champs additionnels à la session
+    additionalFields: {
+      role: {
+        type: "string",
+        required: false,
+        defaultValue: "TALENT_MANAGER"
+      },
+      agencyId: {
+        type: "string",
+        required: false,
+      },
+      status: {
+        type: "string",
+        required: false,
+        defaultValue: "ACTIVE"
+      }
+    }
+  }
 });
 
 export type Auth = typeof auth;

@@ -89,7 +89,7 @@ export default function AddCreatorPage() {
   const onSubmit = async (data: AddCreatorFormValues) => {
     try {
       // Créer un email à partir du nom et prénom
-      const email = `${data.firstName.toLowerCase()}.${data.lastName.toLowerCase()}@eidoles.com`;
+      const email = `${data.firstName.toLowerCase()}.${data.lastName.toLowerCase()}@talentylabs.com`;
       
       // Extraire la ville de l'adresse
       const location = data.address.split(',').slice(-2).join(',').trim();

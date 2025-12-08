@@ -1,5 +1,13 @@
-import { pgTable, text, timestamp, boolean, integer, json } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, json, pgEnum } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+
+// ============================================
+// ENUMS
+// ============================================
+
+export const userRoleEnum = pgEnum('user_role', ['ADMIN', 'TALENT_MANAGER', 'TALENT']);
+export const userStatusEnum = pgEnum('user_status', ['INVITED', 'ACTIVE', 'DISABLED']);
+export const invitationStatusEnum = pgEnum('invitation_status', ['PENDING', 'ACCEPTED', 'EXPIRED', 'CANCELED']);
 
 // ============================================
 // BETTER AUTH TABLES
@@ -11,6 +19,13 @@ export const users = pgTable("user", {
   emailVerified: boolean("emailVerified").default(false),
   name: text("name"),
   image: text("image"),
+  
+  // Nouveaux champs pour le système de collaborateurs
+  role: userRoleEnum("role").default('TALENT_MANAGER').notNull(),
+  status: userStatusEnum("status").default('ACTIVE').notNull(),
+  agencyId: text("agency_id").references(() => agencies.id, { onDelete: "cascade" }),
+  lastLoginAt: timestamp("last_login_at"),
+  
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -228,7 +243,44 @@ export const talentTodos = pgTable("talent_todos", {
 });
 
 // ============================================
-// COLLABORATORS
+// INVITATIONS
+// ============================================
+
+export const invitations = pgTable("invitations", {
+  id: text("id").primaryKey(),
+  agencyId: text("agency_id").notNull().references(() => agencies.id, { onDelete: "cascade" }),
+  email: text("email").notNull(),
+  role: userRoleEnum("role").notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  status: invitationStatusEnum("status").default('PENDING').notNull(),
+  
+  expiresAt: timestamp("expires_at").notNull(),
+  invitedBy: text("invited_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+  acceptedAt: timestamp("accepted_at"),
+  
+  metadata: json("metadata").$type<{ talentIds?: string[] }>(),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ============================================
+// TALENT ASSIGNMENTS (User ↔ Talent)
+// ============================================
+
+export const talentAssignments = pgTable("talent_assignments", {
+  id: text("id").primaryKey(),
+  talentId: text("talent_id").notNull().references(() => talents.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  assignedBy: text("assigned_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+  roleOnTalent: text("role_on_talent").notNull().default('MANAGER'), // 'MANAGER' | 'VIEWER'
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ============================================
+// COLLABORATORS (ancienne table, peut être gardée pour infos externes)
 // ============================================
 
 export const collaborators = pgTable("collaborators", {
@@ -259,8 +311,37 @@ export const usersRelations = relations(users, ({ many, one }) => ({
   sessions: many(sessions),
   accounts: many(accounts),
   agency: one(agencies, {
-    fields: [users.id],
-    references: [agencies.ownerId],
+    fields: [users.agencyId],
+    references: [agencies.id],
+  }),
+  talentAssignments: many(talentAssignments),
+  invitationsSent: many(invitations, { relationName: 'invitedBy' }),
+}));
+
+export const invitationsRelations = relations(invitations, ({ one }) => ({
+  agency: one(agencies, {
+    fields: [invitations.agencyId],
+    references: [agencies.id],
+  }),
+  inviter: one(users, {
+    fields: [invitations.invitedBy],
+    references: [users.id],
+    relationName: 'invitedBy',
+  }),
+}));
+
+export const talentAssignmentsRelations = relations(talentAssignments, ({ one }) => ({
+  talent: one(talents, {
+    fields: [talentAssignments.talentId],
+    references: [talents.id],
+  }),
+  user: one(users, {
+    fields: [talentAssignments.userId],
+    references: [users.id],
+  }),
+  assigner: one(users, {
+    fields: [talentAssignments.assignedBy],
+    references: [users.id],
   }),
 }));
 
@@ -286,6 +367,7 @@ export const talentsRelations = relations(talents, ({ one, many }) => ({
   mediaKit: one(mediaKits),
   documents: many(talentDocuments),
   todos: many(talentTodos),
+  assignments: many(talentAssignments),
 }));
 
 export const collaborationsRelations = relations(collaborations, ({ one }) => ({

@@ -205,7 +205,7 @@ function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoI
       style={style}
       {...attributes}
       {...listeners}
-      className={`group relative flex items-start gap-3 p-4 rounded-2xl transition-all ${
+      className={`group relative flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-2xl transition-all ${
         todo.completed 
           ? "bg-gray-100 cursor-default" 
           : "bg-black/5 hover:bg-black/10 cursor-grab active:cursor-grabbing"
@@ -219,10 +219,10 @@ function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoI
           onToggle(todo.id, !todo.completed);
         }}
         onClick={(e) => e.stopPropagation()}
-        className="mt-1 rounded border-black/20 cursor-pointer shrink-0"
+        className="mt-0.5 sm:mt-1 rounded border-black/20 cursor-pointer shrink-0 w-4 h-4"
       />
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm font-light break-words ${
+      <div className="flex-1 min-w-0 overflow-hidden">
+        <p className={`text-xs sm:text-sm font-light break-words ${
           todo.completed 
             ? "text-gray-400 line-through" 
             : "text-black"
@@ -237,13 +237,15 @@ function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoI
           </p>
         )}
       </div>
-      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+      {/* Desktop uniquement: boutons au hover */}
+      <div className="hidden sm:flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
         <button
           onClick={(e) => {
             e.stopPropagation();
             onArchive(todo.id);
           }}
-          className="text-xs text-black/40 hover:text-black font-light"
+          className="text-xs text-black/40 hover:text-black font-light whitespace-nowrap"
+          title="Archiver"
         >
           Archiver
         </button>
@@ -252,7 +254,8 @@ function SortableTodoItem({ todo, onToggle, onArchive, onDelete }: SortableTodoI
             e.stopPropagation();
             onDelete(todo.id);
           }}
-          className="w-5 h-5 rounded-full hover:bg-red-50 flex items-center justify-center text-black/30 hover:text-red-600 transition-colors hidden sm:flex"
+          className="w-5 h-5 rounded-full hover:bg-red-50 flex items-center justify-center text-black/30 hover:text-red-600 transition-colors"
+          title="Supprimer"
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -269,6 +272,7 @@ export default function CreatorProfilePage() {
   const creatorId = params.id as string;
   const activeTab = searchParams.get('tab') || 'overview';
   
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [creator, setCreator] = useState<Talent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [creatorImage, setCreatorImage] = useState("");
@@ -276,6 +280,9 @@ export default function CreatorProfilePage() {
   const [isEditingInsights, setIsEditingInsights] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [mediakitUrl, setMediakitUrl] = useState<string | null>(null);
+  const [allTalents, setAllTalents] = useState<Talent[]>([]);
+  const [isTalentSelectorOpen, setIsTalentSelectorOpen] = useState(false);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [editedData, setEditedData] = useState({
     firstName: "",
     lastName: "",
@@ -470,7 +477,6 @@ export default function CreatorProfilePage() {
         console.log(`🔄 Auto-update: ${collab.marque} → statut "terminé" (date passée)`);
         try {
           await updateCollaborationAPI(collab.id, {
-            ...collab,
             statut: "termine"
           });
         } catch (error) {
@@ -479,6 +485,22 @@ export default function CreatorProfilePage() {
       }
     }
   };
+
+  // Récupérer le rôle de l'utilisateur
+  useEffect(() => {
+    async function fetchRole() {
+      try {
+        const res = await fetch('/api/user/role', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setUserRole(data.role);
+        }
+      } catch (err) {
+        console.error('Error fetching role:', err);
+      }
+    }
+    fetchRole();
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -490,6 +512,15 @@ export default function CreatorProfilePage() {
         // Charger les catégories via l'API
         const cats = await getCategories(agencyId);
         setCategories(cats.map((c: any) => c.name));
+        
+        // Charger tous les talents pour le sélecteur
+        try {
+          const { getTalents } = await import('@/lib/api-client');
+          const talentsData = await getTalents();
+          setAllTalents(talentsData.filter((t: Talent) => t.id !== creatorId));
+        } catch (error) {
+          console.error('Erreur chargement talents:', error);
+        }
         
         // Charger le talent via l'API
         const talent = await getTalentById(creatorId);
@@ -806,11 +837,13 @@ export default function CreatorProfilePage() {
             <p className="text-sm text-black/40 font-light mb-6">
               Ce talent n'existe pas ou a été supprimé
             </p>
-            <Link href="/dashboard">
-              <Button className="btn-accent rounded-full font-light px-8">
-                ← Retour au dashboard
-              </Button>
-            </Link>
+            {userRole !== 'TALENT' && (
+              <Link href="/dashboard">
+                <Button className="btn-accent rounded-full font-light px-8">
+                  ← Retour au dashboard
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -843,37 +876,162 @@ export default function CreatorProfilePage() {
     <div className="min-h-screen bg-[#fafaf9]">
       {/* Header */}
       <div className="border-b border-black/5 bg-white px-4 sm:px-8 py-4 sm:py-6">
-        <Link href="/dashboard" className="text-sm text-black/60 hover:text-black font-light mb-4 inline-block pl-12 sm:pl-0">
-          ← Retour à la liste
-        </Link>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3 sm:gap-5 w-full sm:w-auto pl-12 sm:pl-0">
-            {/* Photo du talent */}
-            <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-black/5 flex-shrink-0">
-              <img 
-                src={creatorImage} 
-                alt={`${creator.firstName} ${creator.lastName}`}
-                className="w-full h-full object-cover"
-              />
+        {userRole !== 'TALENT' && (
+          <Link href="/dashboard" className="hidden sm:inline-block text-sm text-black/60 hover:text-black font-light mb-4">
+            ← Retour à la liste
+          </Link>
+        )}
+        <div className="flex flex-col sm:flex-row items-center sm:items-center justify-between gap-4 relative">
+          {/* Bouton Modifier discret en haut à droite (mobile et desktop) */}
+          {activeTab === "overview" && !isEditMode && (
+            <button
+              onClick={() => setIsEditMode(true)}
+              className="absolute top-0 right-0 p-2 hover:bg-black/5 rounded-full transition-colors text-black/40 hover:text-black"
+              title="Modifier"
+            >
+              <Edit className="w-5 h-5" />
+            </button>
+          )}
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-5 w-full sm:w-auto text-center sm:text-left">
+            {/* Photo du talent avec sélecteur - AGRANDIE */}
+            <div className="relative">
+              <button
+                onMouseDown={() => {
+                  const timer = setTimeout(() => {
+                    setIsTalentSelectorOpen(true);
+                  }, 500);
+                  setLongPressTimer(timer);
+                }}
+                onMouseUp={() => {
+                  if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    setLongPressTimer(null);
+                  }
+                }}
+                onMouseLeave={() => {
+                  if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    setLongPressTimer(null);
+                  }
+                }}
+                onTouchStart={() => {
+                  const timer = setTimeout(() => {
+                    setIsTalentSelectorOpen(true);
+                  }, 500);
+                  setLongPressTimer(timer);
+                }}
+                onTouchEnd={() => {
+                  if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    setLongPressTimer(null);
+                  }
+                }}
+                className="relative"
+              >
+                {/* Liseret statique avec petits points indicateurs */}
+                {allTalents.length > 0 && (
+                  <div className="absolute inset-0 -m-2">
+                    {/* Cercle extérieur avec gap */}
+                    <svg className="w-full h-full" viewBox="0 0 100 100">
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="48"
+                        fill="none"
+                        stroke="#000000"
+                        strokeWidth="1"
+                        strokeDasharray="4 4"
+                        opacity="0.15"
+                      />
+                      {/* Petits points directionnels */}
+                      <circle cx="50" cy="8" r="2" fill="#000000" opacity="0.3" />
+                      <circle cx="50" cy="92" r="2" fill="#000000" opacity="0.3" />
+                      <circle cx="8" cy="50" r="2" fill="#000000" opacity="0.3" />
+                      <circle cx="92" cy="50" r="2" fill="#000000" opacity="0.3" />
+                    </svg>
+                  </div>
+                )}
+                
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-2 border-black/10 flex-shrink-0 relative z-10">
+                  <img 
+                    src={creatorImage} 
+                    alt={`${creator.firstName} ${creator.lastName}`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                
+                {/* Badge indicateur minimaliste */}
+                {allTalents.length > 0 && (
+                  <div className="absolute -bottom-1 -right-1 bg-black text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-light border-2 border-white">
+                    {allTalents.length}
+                  </div>
+                )}
+              </button>
+
+              {/* Menu sélecteur de talents */}
+              {isTalentSelectorOpen && allTalents.length > 0 && (
+                <div 
+                  className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                  onClick={() => setIsTalentSelectorOpen(false)}
+                >
+                  <div 
+                    className="bg-white rounded-3xl p-6 max-w-sm w-full max-h-[70vh] overflow-hidden flex flex-col shadow-2xl animate-slide-up"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-medium text-black">Changer de talent</h3>
+                      <button
+                        onClick={() => setIsTalentSelectorOpen(false)}
+                        className="p-2 hover:bg-black/5 rounded-full transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    
+                    <div className="flex-1 overflow-y-auto space-y-2">
+                      {allTalents.map((talent) => (
+                        <button
+                          key={talent.id}
+                          onClick={() => {
+                            router.push(`/dashboard/creators/${talent.id}`);
+                            setIsTalentSelectorOpen(false);
+                          }}
+                          className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-black/5 transition-all group"
+                        >
+                          <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-black/5 flex-shrink-0">
+                            <img 
+                              src={talent.image || `https://ui-avatars.com/api/?name=${talent.firstName}+${talent.lastName}&size=100&background=random`}
+                              alt={`${talent.firstName} ${talent.lastName}`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 text-left">
+                            <p className="font-medium text-black">
+                              {talent.firstName} {talent.lastName}
+                            </p>
+                            {talent.category && (
+                              <p className="text-xs text-black/40">{talent.category}</p>
+                            )}
+                          </div>
+                          <svg className="w-5 h-5 text-black/20 group-hover:text-black/40 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
+            
           <div>
-              <h1 className="text-2xl sm:text-4xl font-light text-black">
+              <h1 className="text-3xl sm:text-4xl font-light text-black">
               Hello {creator.firstName} 👋
             </h1>
-              <p className="text-xs sm:text-sm text-black/40 font-light mt-1">{creator.category}</p>
+              <p className="text-sm sm:text-base text-black/40 font-light mt-1">{creator.category}</p>
             </div>
           </div>
-          {activeTab === "overview" && !isEditMode && (
-            <Button
-              onClick={() => setIsEditMode(true)}
-              variant="outline"
-              size="sm"
-              className="border-black/10 hover:bg-black/5 rounded-full font-light"
-            >
-              <Edit className="w-4 h-4 mr-2" />
-              Modifier
-            </Button>
-          )}
         </div>
       </div>
 
@@ -2490,16 +2648,69 @@ export default function CreatorProfilePage() {
 
             {/* Coordonnées */}
             <Card className="bg-white border border-black/5 rounded-3xl p-6 sm:p-8">
-              <h3 className="text-lg sm:text-xl font-light text-black mb-4 sm:mb-6">Coordonnées</h3>
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h3 className="text-lg sm:text-xl font-light text-black">Coordonnées</h3>
+                {!isEditMode && (creator?.address || creator?.phone || creator?.email) && (
+                  <Button
+                    onClick={() => {
+                      const coords = [];
+                      if (creator.address) coords.push(`📍 ${creator.address}`);
+                      if (creator.addressComplement) coords.push(`   ${creator.addressComplement}`);
+                      if (creator.addressSecondary) coords.push(`📍 ${creator.addressSecondary}`);
+                      if (creator.phone) coords.push(`📞 ${creator.phone}`);
+                      if (creator.email) coords.push(`📧 ${creator.email}`);
+                      
+                      navigator.clipboard.writeText(coords.join('\n')).then(() => {
+                        const btn = document.getElementById('copy-all-btn');
+                        if (btn) {
+                          btn.textContent = '✓ Copié !';
+                          setTimeout(() => {
+                            btn.textContent = 'Copier tout';
+                          }, 2000);
+                        }
+                      });
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full text-xs h-8"
+                  >
+                    <span id="copy-all-btn">Copier tout</span>
+                  </Button>
+                )}
+              </div>
               <div className="space-y-4 sm:space-y-6">
                 <div>
                   <Label className="text-black/80 font-light">Adresse complète</Label>
-                  <Input
-                    value={editedData.address}
-                    onChange={(e) => setEditedData({...editedData, address: e.target.value})}
-                    placeholder="123 Rue de la Paix, 75001 Paris"
-                    className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
-                  />
+                  <div className="relative mt-2">
+                    <Input
+                      value={editedData.address}
+                      onChange={(e) => setEditedData({...editedData, address: e.target.value})}
+                      placeholder="123 Rue de la Paix, 75001 Paris"
+                      className="h-12 rounded-xl border-black/10 bg-black/5 pr-12"
+                    />
+                    {!isEditMode && editedData.address && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(editedData.address).then(() => {
+                            const btn = document.getElementById('copy-address');
+                            if (btn) {
+                              btn.innerHTML = '<svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                              setTimeout(() => {
+                                btn.innerHTML = '<svg class="w-4 h-4 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>';
+                              }, 2000);
+                            }
+                          });
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-black/5 rounded-lg transition-colors"
+                        title="Copier l'adresse"
+                        id="copy-address"
+                      >
+                        <svg className="w-4 h-4 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -2514,32 +2725,104 @@ export default function CreatorProfilePage() {
 
                 <div>
                   <Label className="text-black/80 font-light">Adresse secondaire</Label>
-                  <Input
-                    value={editedData.addressSecondary}
-                    onChange={(e) => setEditedData({...editedData, addressSecondary: e.target.value})}
-                    placeholder="45 Rue de Lyon, 13001 Marseille"
-                    className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
-                  />
+                  <div className="relative mt-2">
+                    <Input
+                      value={editedData.addressSecondary}
+                      onChange={(e) => setEditedData({...editedData, addressSecondary: e.target.value})}
+                      placeholder="45 Rue de Lyon, 13001 Marseille"
+                      className="h-12 rounded-xl border-black/10 bg-black/5 pr-12"
+                    />
+                    {!isEditMode && editedData.addressSecondary && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(editedData.addressSecondary).then(() => {
+                            const btn = document.getElementById('copy-address2');
+                            if (btn) {
+                              btn.innerHTML = '<svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                              setTimeout(() => {
+                                btn.innerHTML = '<svg class="w-4 h-4 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>';
+                              }, 2000);
+                            }
+                          });
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-black/5 rounded-lg transition-colors"
+                        title="Copier l'adresse secondaire"
+                        id="copy-address2"
+                      >
+                        <svg className="w-4 h-4 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label className="text-black/80 font-light">Téléphone</Label>
-                    <Input
-                      value={editedData.phone}
-                      onChange={(e) => setEditedData({...editedData, phone: e.target.value})}
-                      placeholder="+33 6 12 34 56 78"
-                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
-                    />
+                    <div className="relative mt-2">
+                      <Input
+                        value={editedData.phone}
+                        onChange={(e) => setEditedData({...editedData, phone: e.target.value})}
+                        placeholder="+33 6 12 34 56 78"
+                        className="h-12 rounded-xl border-black/10 bg-black/5 pr-12"
+                      />
+                      {!isEditMode && editedData.phone && (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(editedData.phone).then(() => {
+                              const btn = document.getElementById('copy-phone');
+                              if (btn) {
+                                btn.innerHTML = '<svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                                setTimeout(() => {
+                                  btn.innerHTML = '<svg class="w-4 h-4 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>';
+                                }, 2000);
+                              }
+                            });
+                          }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-black/5 rounded-lg transition-colors"
+                          title="Copier le téléphone"
+                          id="copy-phone"
+                        >
+                          <svg className="w-4 h-4 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <Label className="text-black/80 font-light">Email</Label>
-                    <Input
-                      value={editedData.email}
-                      onChange={(e) => setEditedData({...editedData, email: e.target.value})}
-                      placeholder="email@exemple.com"
-                      className="mt-2 h-12 rounded-xl border-black/10 bg-black/5"
-                    />
+                    <div className="relative mt-2">
+                      <Input
+                        value={editedData.email}
+                        onChange={(e) => setEditedData({...editedData, email: e.target.value})}
+                        placeholder="email@exemple.com"
+                        className="h-12 rounded-xl border-black/10 bg-black/5 pr-12"
+                      />
+                      {!isEditMode && editedData.email && (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(editedData.email).then(() => {
+                              const btn = document.getElementById('copy-email');
+                              if (btn) {
+                                btn.innerHTML = '<svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                                setTimeout(() => {
+                                  btn.innerHTML = '<svg class="w-4 h-4 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>';
+                                }, 2000);
+                              }
+                            });
+                          }}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-black/5 rounded-lg transition-colors"
+                          title="Copier l'email"
+                          id="copy-email"
+                        >
+                          <svg className="w-4 h-4 text-black/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

@@ -73,7 +73,7 @@ export default function SignInPage() {
   // Logos des agences d'influence
   const agencies = [
     "Makers Studio",
-    "Eidoles",
+    "TalentyLabs",
     "Talents Co",
     "Influence",
   ];
