@@ -915,7 +915,8 @@ export default function CreatorProfilePage() {
                     setLongPressTimer(null);
                   }
                 }}
-                onTouchStart={() => {
+                onTouchStart={(e) => {
+                  e.preventDefault();
                   const timer = setTimeout(() => {
                     setIsTalentSelectorOpen(true);
                   }, 500);
@@ -927,18 +928,30 @@ export default function CreatorProfilePage() {
                     setLongPressTimer(null);
                   }
                 }}
-                className="relative group"
+                onContextMenu={(e) => e.preventDefault()}
+                className="relative group touch-manipulation select-none"
+                style={{ 
+                  WebkitTouchCallout: 'none',
+                  WebkitUserSelect: 'none',
+                  touchAction: 'manipulation'
+                }}
               >
                 {/* Indicateur subtil au hover/touch pour sélecteur de talents */}
                 {allTalents.length > 0 && (
-                  <div className="absolute inset-0 -m-1.5 rounded-full border border-black/5 group-active:border-black/20 transition-colors" />
+                  <div className="absolute inset-0 -m-1.5 rounded-full border border-black/5 group-active:border-black/20 transition-colors pointer-events-none" />
                 )}
                 
                 <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-2 border-black/10 flex-shrink-0 relative shadow-sm">
                   <img 
                     src={creatorImage} 
                     alt={`${creator.firstName} ${creator.lastName}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover pointer-events-none select-none"
+                    draggable="false"
+                    style={{
+                      WebkitTouchCallout: 'none',
+                      WebkitUserSelect: 'none',
+                      userSelect: 'none'
+                    }}
                   />
                 </div>
               </button>
