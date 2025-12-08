@@ -24,6 +24,7 @@ export const users = pgTable("user", {
   // Nouveaux champs pour le système de collaborateurs
   role: userRoleEnum("role").default('TALENT_MANAGER').notNull(),
   status: userStatusEnum("status").default('ACTIVE').notNull(),
+  // @ts-ignore - Circular reference with agencies is resolved at runtime
   agencyId: text("agency_id").references(() => agencies.id, { onDelete: "cascade" }),
   lastLoginAt: timestamp("last_login_at"),
   
@@ -68,6 +69,7 @@ export const agencies = pgTable("agencies", {
   logo: text("logo"),
   primaryColor: text("primary_color").default("#000000"),
   useDefaultColors: boolean("use_default_colors").default(true),
+  // @ts-ignore - Circular reference with users is resolved at runtime
   ownerId: text("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
