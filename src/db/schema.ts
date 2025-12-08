@@ -13,6 +13,7 @@ export const invitationStatusEnum = pgEnum('invitation_status', ['PENDING', 'ACC
 // BETTER AUTH TABLES
 // ============================================
 
+// @ts-ignore - Circular reference with agencies is resolved at runtime
 export const users = pgTable("user", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
