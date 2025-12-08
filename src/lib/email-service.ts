@@ -1,7 +1,5 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 type UserRole = 'ADMIN' | 'TALENT_MANAGER' | 'TALENT';
 
 interface SendInvitationEmailParams {
@@ -10,6 +8,16 @@ interface SendInvitationEmailParams {
   inviteLink: string;
   agencyName: string;
   invitedByName: string;
+}
+
+// Lazy initialization pour éviter les erreurs au build time
+let resendInstance: Resend | null = null;
+
+function getResend(): Resend {
+  if (!resendInstance) {
+    resendInstance = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendInstance;
 }
 
 export async function sendInvitationEmail({
@@ -28,6 +36,7 @@ export async function sendInvitationEmail({
   const roleLabel = roleLabels[role];
   
   try {
+    const resend = getResend();
     const { data, error } = await resend.emails.send({
       from: process.env.RESEND_FROM_EMAIL!,
       to,
